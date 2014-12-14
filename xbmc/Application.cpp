@@ -2515,6 +2515,8 @@ bool CApplication::Cleanup()
     if (m_pGUI)
       m_pGUI->GetWindowManager().DestroyWindows();
 
+    CServiceBroker::GetDatabaseManager().Deinitialize();
+
     CLog::Log(LOGINFO, "unload sections");
 
     //  Shutdown as much as possible of the
