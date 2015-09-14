@@ -13,6 +13,8 @@
 #include "LibraryQueue.h"
 #include "ServiceBroker.h"
 #include "dialogs/GUIDialogProgress.h"
+#include "events/EventLog.h"
+#include "events/MediaImportEvent.h"
 #include "guilib/GUIComponent.h"
 #include "guilib/GUIWindowManager.h"
 #include "interfaces/AnnouncementManager.h"
@@ -1611,6 +1613,9 @@ bool CMediaImportManager::AddImport(const CMediaImport& import)
   if (!success)
     return false;
 
+  if (added)
+    CServiceBroker::GetEventLog().Add(EventPtr(new CMediaImportEvent(import, 39567)));
+
   return true;
 }
 
@@ -2011,6 +2016,9 @@ void CMediaImportManager::OnSourceJobComplete(const CMediaImportSourceJobBase* s
     }
     OnSourceAdded(source);
 
+    CServiceBroker::GetEventLog().AddWithNotification(
+        EventPtr(new CMediaImportSourceEvent(source, 39550)));
+
     // check if the source should also be activated
     if (sourceRegistrationTask->ActivateSource())
     {
@@ -2126,6 +2134,9 @@ void CMediaImportManager::OnJobComplete(unsigned int jobID, bool success, CJob* 
 
         OnSourceRemoved(source);
         m_logger->debug("source {} removed", source);
+
+        CServiceBroker::GetEventLog().Add(
+            EventPtr(new CMediaImportSourceEvent(source, 39551, true)));
       }
     }
   }
@@ -2178,14 +2189,18 @@ bool CMediaImportManager::OnTaskComplete(bool success, const IMediaImportTask* t
   }
   else if (taskType == MediaImportTaskType::Synchronisation)
   {
-    if (!success)
-      return false;
-
     const auto* synchronisationTask = dynamic_cast<const CMediaImportSynchronisationTask*>(task);
     if (synchronisationTask == nullptr)
       return false;
 
     auto import = synchronisationTask->GetImport();
+    if (!success)
+    {
+      CServiceBroker::GetEventLog().Add(
+          EventPtr(new CMediaImportEvent(import, 39553, EventLevel::Error)));
+      return false;
+    }
+
     // early return here if this is not the last media type to be synchronised to avoid multiple updates
     if (synchronisationTask->GetMediaType() != import.GetMediaTypes().back())
       return true;
@@ -2203,18 +2218,22 @@ bool CMediaImportManager::OnTaskComplete(bool success, const IMediaImportTask* t
     {
       OnSourceUpdated(import.GetSource());
       OnImportUpdated(import);
+      CServiceBroker::GetEventLog().Add(EventPtr(new CMediaImportEvent(import, 39554)));
     }
   }
   else if (taskType == MediaImportTaskType::Removal)
   {
-    if (!success)
-      return false;
-
     const auto* removalTask = dynamic_cast<const CMediaImportRemovalTask*>(task);
     if (removalTask == nullptr)
       return false;
 
     const auto& import = removalTask->GetImport();
+    if (!success)
+    {
+      CServiceBroker::GetEventLog().Add(
+          EventPtr(new CMediaImportEvent(import, 39578, true, EventLevel::Error)));
+      return false;
+    }
 
     // remove the import from the import repositories
     {
@@ -2225,6 +2244,8 @@ bool CMediaImportManager::OnTaskComplete(bool success, const IMediaImportTask* t
 
     // let everyone know that the import has been removed
     OnImportRemoved(import);
+
+    CServiceBroker::GetEventLog().Add(EventPtr(new CMediaImportEvent(import, 39579, true)));
   }
   else if (taskType == MediaImportTaskType::Update)
   {
