@@ -24,6 +24,7 @@
 #include "media/import/jobs/tasks/MediaImportUpdateTask.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
+#include "utils/PerformanceMeasurement.h"
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 
@@ -415,13 +416,24 @@ bool CMediaImportTaskProcessorJob::ProcessTask(IMediaImportTask* task)
 
   SetTask(task);
 
+  const auto& import = task->GetImport();
+
+  s_logger->debug("processing {} task from {}...", MediaImportTaskTypes::ToString(task->GetType()),
+                  import);
+
+  // performance measurements
+  CPerformanceMeasurement<> perf;
+
   // let the current task do its work
-  CLog::Log(LOGDEBUG, "CMediaImportTaskProcessorJob: processing %s task",
-    MediaImportTaskTypes::ToString(task->GetType()).c_str());
   bool success = task->DoWork();
 
   // the task has been completed
   success &= OnTaskComplete(success, task);
+
+  perf.Stop();
+  s_logger->debug("processing {} task from {} took {} s",
+                  MediaImportTaskTypes::ToString(task->GetType()), import,
+                  perf.GetDurationInSeconds());
 
   ResetTask();
 
