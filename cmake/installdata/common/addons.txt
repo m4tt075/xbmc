@@ -44,3 +44,4 @@ addons/metadata.generic.artists/*
 addons/metadata.themoviedb.org/*
 addons/metadata.tvshows.themoviedb.org/*
 addons/kodi.vfs/*
+addons/mediaimporter.emby/*
