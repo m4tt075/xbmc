@@ -181,6 +181,19 @@ namespace XBMCAddon
       CServiceBroker::GetXBPython().UnregisterPythonMonitorCallBack(monitor);
     }
 
+    void PythonLanguageHook::RegisterMediaImporterObserverCallback(
+        const std::string& importerId, XBMCAddon::xbmcmediaimport::Observer* observer)
+    {
+      XBMC_TRACE;
+      CServiceBroker::GetXBPython().RegisterPythonMediaImporterObserverCallback(importerId, observer);
+    }
+    void PythonLanguageHook::UnregisterMediaImporterObserverCallback(
+        const std::string& importerId, XBMCAddon::xbmcmediaimport::Observer* observer)
+    {
+      XBMC_TRACE;
+      CServiceBroker::GetXBPython().UnregisterPythonMediaImporterObserverCallback(importerId, observer);
+    }
+
     bool PythonLanguageHook::WaitForEvent(CEvent& hEvent, unsigned int milliseconds)
     {
       XBMC_TRACE;
