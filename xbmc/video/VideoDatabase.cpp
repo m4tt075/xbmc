@@ -3263,7 +3263,7 @@ bool CVideoDatabase::GetResumeBookMark(const std::string& strFilenameAndPath, CB
   return false;
 }
 
-void CVideoDatabase::DeleteResumeBookMark(const CFileItem& item)
+void CVideoDatabase::DeleteResumeBookMark(const CFileItem& item, bool announceUpdate /* = true */)
 {
   if (!m_pDB || !m_pDS)
     return;
@@ -3301,7 +3301,7 @@ void CVideoDatabase::DeleteResumeBookMark(const CFileItem& item)
         break;
     }
 
-    if (!content.empty())
+    if (announceUpdate && !content.empty())
     {
       AnnounceUpdate(content, item.GetVideoInfoTag()->m_iDbId);
     }
