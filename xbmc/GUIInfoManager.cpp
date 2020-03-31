@@ -6474,6 +6474,22 @@ const infomap container_str[]  = {{ "property",         CONTAINER_PROPERTY },
 ///     @skinning_v19 **[New Infolabel]** \link ListItem_IsEnabled `ListItem.IsEnabled`\endlink
 ///     <p>
 ///   }
+///   \table_row3{   <b>`ListItem.IsImported`</b>,
+///                  \anchor ListItem_IsImported
+///                  _boolean_,
+///     @return **True** if the item has been imported from a media source.
+///     <p><hr>
+///     @skinning_v19 **[New Infolabel]** \link ListItem_IsImported `ListItem.IsImported`\endlink
+///     <p>
+///   }
+///   \table_row3{   <b>`ListItem.MediaImporter`</b>,
+///                  \anchor ListItem_MediaImporter
+///                  _string_,
+///     @return Identifier of the media importer which imported the item from a media source.
+///     <p><hr>
+///     @skinning_v19 **[New Infolabel]** \link ListItem_MediaImporter `ListItem.MediaImporter`\endlink
+///     <p>
+///   }
 /// \table_end
 ///
 /// -----------------------------------------------------------------------------
@@ -6683,6 +6699,8 @@ const infomap listitem_labels[]= {{ "thumb",            LISTITEM_THUMB },
                                   { "tvshowdbid",       LISTITEM_TVSHOWDBID },
                                   { "albumstatus",      LISTITEM_ALBUMSTATUS },
                                   { "isenabled",        LISTITEM_ISENABLED },
+                                  { "isimported",       LISTITEM_IS_IMPORTED },
+                                  { "mediaimporter",    LISTITEM_MEDIAIMPORTER },
 };
 
 /// \page modules__infolabels_boolean_conditions
