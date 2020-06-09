@@ -246,14 +246,14 @@ private:
       bool success,
       CAddonMediaImporterExecutor::Action action) throw(InvalidAddonMediaImporterHandleException);
 
+  static Logger GetLogger();
+
   bool m_settingsLoaded = false;
 
   bool m_integerSettingOptionsSet = false;
   IntegerSettingOptions m_integerSettingOptions;
   bool m_stringSettingOptionsSet = false;
   StringSettingOptions m_stringSettingOptions;
-
-  static Logger s_logger;
 };
 
 class CAddonMediaImporterObserver : public IMediaImporterObserver,

@@ -114,7 +114,7 @@ CAddonMediaImporterExecutor* CAddonMediaImporterExecutor::GetExecutorFromHandle(
   if (importer != nullptr)
     return importer;
 
-  static Logger logger = CServiceBroker::GetLogging().GetLogger("CAddonMediaImporterExecutor");
+  auto logger = CServiceBroker::GetLogging().GetLogger("CAddonMediaImporterExecutor");
 
   logger->error("invalid script handle {:d}", handle);
   throw InvalidAddonMediaImporterHandleException("handle: %d", handle);

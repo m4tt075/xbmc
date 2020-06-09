@@ -30,8 +30,6 @@
 
 #include <fmt/ostream.h>
 
-Logger CMediaImportTaskProcessorJob::s_logger;
-
 CMediaImportTaskProcessorJob::CMediaImportTaskProcessorJob(
     const std::string& path,
     const IMediaImporterManager* importerManager,
@@ -48,9 +46,6 @@ CMediaImportTaskProcessorJob::CMediaImportTaskProcessorJob(
     m_importTaskData(),
     m_taskTypesToBeProcessed()
 {
-  if (s_logger == nullptr)
-    s_logger = CServiceBroker::GetLogging().GetLogger("CMediaImportTaskProcessorJob");
-
   if (m_hasProgress && CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
                            CSettings::SETTING_VIDEOLIBRARY_BACKGROUNDUPDATE))
     m_hasProgress = false;
@@ -71,13 +66,13 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::Import(
 {
   if (importerManager == nullptr)
   {
-    s_logger->error("invalid media importer manager implementation");
+    GetLogger()->error("invalid media importer manager implementation");
     return nullptr;
   }
 
   if (importHandlerManager == nullptr)
   {
-    s_logger->error("invalid media import handler manager implementation");
+    GetLogger()->error("invalid media import handler manager implementation");
     return nullptr;
   }
 
@@ -85,7 +80,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::Import(
   if (automatically && tmpImport.Settings()->Load() &&
       tmpImport.Settings()->GetImportTrigger() != MediaImportTrigger::Auto)
   {
-    s_logger->debug("automatic import of items from {} is disabled", import);
+    GetLogger()->debug("automatic import of items from {} is disabled", import);
     return nullptr;
   }
 
@@ -93,7 +88,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::Import(
       import.GetSource().GetIdentifier(), importerManager, importHandlerManager, callback, true);
   if (!processorJob->AddImport(import, {}))
   {
-    s_logger->warn("failed to import items from {}", import);
+    GetLogger()->warn("failed to import items from {}", import);
     return nullptr;
   }
 
@@ -108,7 +103,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::ChangeImportedItems(
 {
   if (importHandlerManager == nullptr)
   {
-    s_logger->error("invalid media import handler manager implementation");
+    GetLogger()->error("invalid media import handler manager implementation");
     return nullptr;
   }
 
@@ -177,7 +172,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::UpdateImportedItemOn
 {
   if (importerManager == nullptr)
   {
-    s_logger->error("invalid media importer manager implementation");
+    GetLogger()->error("invalid media importer manager implementation");
     return nullptr;
   }
 
@@ -199,7 +194,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::Cleanup(
 {
   if (importHandlerManager == nullptr)
   {
-    s_logger->error("invalid media import handler manager implementation");
+    GetLogger()->error("invalid media import handler manager implementation");
     return nullptr;
   }
 
@@ -216,7 +211,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::Cleanup(
   {
     if (!processorJob->AddImport(import, tasksToBeProcessed))
     {
-      s_logger->warn("failed to cleanup imported items from {}", import);
+      GetLogger()->warn("failed to cleanup imported items from {}", import);
       continue;
     }
 
@@ -248,7 +243,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::Remove(
 {
   if (importHandlerManager == nullptr)
   {
-    s_logger->error("invalid media import handler manager implementation");
+    GetLogger()->error("invalid media import handler manager implementation");
     return nullptr;
   }
 
@@ -261,7 +256,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::Remove(
   {
     if (!processorJob->AddImport(import, tasksToBeProcessed))
     {
-      s_logger->warn("failed to remove imported items from {}", import);
+      GetLogger()->warn("failed to remove imported items from {}", import);
       continue;
     }
   }
@@ -402,7 +397,7 @@ bool CMediaImportTaskProcessorJob::ProcessTask()
       break;
 
     default:
-      s_logger->warn("unknown import task type {}", static_cast<int>(currentTaskType));
+      GetLogger()->warn("unknown import task type {}", static_cast<int>(currentTaskType));
       return false;
   }
 
@@ -422,7 +417,7 @@ bool CMediaImportTaskProcessorJob::ProcessTask(IMediaImportTask* task)
 
   const auto& import = task->GetImport();
 
-  s_logger->debug("processing {} task from {}...", MediaImportTaskTypes::ToString(task->GetType()),
+  GetLogger()->debug("processing {} task from {}...", MediaImportTaskTypes::ToString(task->GetType()),
                   import);
 
   // performance measurements
@@ -435,7 +430,7 @@ bool CMediaImportTaskProcessorJob::ProcessTask(IMediaImportTask* task)
   success &= OnTaskComplete(success, task);
 
   perf.Stop();
-  s_logger->debug("processing {} task from {} took {} s",
+  GetLogger()->debug("processing {} task from {} took {} s",
                   MediaImportTaskTypes::ToString(task->GetType()), import,
                   perf.GetDurationInSeconds());
 
@@ -459,10 +454,10 @@ void CMediaImportTaskProcessorJob::ProcessLocalItemsRetrievalTasks()
         new CMediaImportLocalItemsRetrievalTask(import, mediaImportHandlers);
 
     // if processing the task failed remove the import (no cleanup needed)
-    s_logger->info("starting local items retrieval task for items from {}...", import);
+    GetLogger()->info("starting local items retrieval task for items from {}...", import);
     if (!ProcessTask(localItemsRetrievalTask))
     {
-      s_logger->error("local items retrieval task for items from {} failed", import);
+      GetLogger()->error("local items retrieval task for items from {} failed", import);
       m_importTaskData.erase(taskData++);
       delete localItemsRetrievalTask;
       continue;
@@ -497,10 +492,10 @@ void CMediaImportTaskProcessorJob::ProcessImportItemsRetrievalTasks()
     }
 
     // if processing the task failed remove the import (no cleanup needed)
-    s_logger->info("starting import items retrieval task for items from {}...", import);
+    GetLogger()->info("starting import items retrieval task for items from {}...", import);
     if (!ProcessTask(importItemsRetrievalTask))
     {
-      s_logger->warn("import items retrieval task for items from {} failed", import);
+      GetLogger()->warn("import items retrieval task for items from {} failed", import);
       m_importTaskData.erase(taskData++);
       delete importItemsRetrievalTask;
       continue;
@@ -536,11 +531,11 @@ void CMediaImportTaskProcessorJob::ProcessChangesetTasks()
           taskData.second.m_partialChangeset);
 
       // if processing the task failed remove the import (no cleanup needed)
-      s_logger->info("starting import changeset task for {} items from {}...",
+      GetLogger()->info("starting import changeset task for {} items from {}...",
                      mediaTypeData->m_mediaType.c_str(), import);
       if (!ProcessTask(changesetTask))
       {
-        s_logger->warn("import changeset task for {} items from {} failed",
+        GetLogger()->warn("import changeset task for {} items from {} failed",
                        mediaTypeData->m_mediaType.c_str(), import);
         mediaTypeData = taskData.second.m_mediaTypeData.erase(mediaTypeData);
         delete changesetTask;
@@ -554,7 +549,7 @@ void CMediaImportTaskProcessorJob::ProcessChangesetTasks()
       // if the changeset is empty there is nothing else to do
       if (mediaTypeData->m_importedItems.empty())
       {
-        s_logger->debug("no {} items from {} changed", mediaTypeData->m_mediaType.c_str(), import);
+        GetLogger()->debug("no {} items from {} changed", mediaTypeData->m_mediaType.c_str(), import);
       }
 
       ++mediaTypeData;
@@ -577,11 +572,11 @@ void CMediaImportTaskProcessorJob::ProcessSynchronisationTasks()
           mediaTypeData->m_importedItems);
 
       // if processing the task failed remove the import (no cleanup needed)
-      s_logger->info("starting import synchronisation task for {} items from {}...",
+      GetLogger()->info("starting import synchronisation task for {} items from {}...",
                      mediaTypeData->m_mediaType.c_str(), import);
       if (!ProcessTask(synchronisationTask))
       {
-        s_logger->warn("import changeset task for {} items from {} failed",
+        GetLogger()->warn("import changeset task for {} items from {} failed",
                        mediaTypeData->m_mediaType.c_str(), import);
         // don't remove the import even though it failed because we should run the cleanup
       }
@@ -605,11 +600,11 @@ void CMediaImportTaskProcessorJob::ProcessCleanupTasks()
           import, MediaImportHandlerPtr(mediaTypeData->m_importHandler->Create()));
 
       // if processing the task failed remove the import (no cleanup needed)
-      s_logger->info("starting import cleanup task for {} items from {}...",
+      GetLogger()->info("starting import cleanup task for {} items from {}...",
                      mediaTypeData->m_mediaType.c_str(), import);
       if (!ProcessTask(cleanupTask))
       {
-        s_logger->warn("import cleanup task for {} items from {} failed",
+        GetLogger()->warn("import cleanup task for {} items from {} failed",
                        mediaTypeData->m_mediaType.c_str(), import);
       }
 
@@ -632,10 +627,10 @@ void CMediaImportTaskProcessorJob::ProcessRemovalTasks()
           import, MediaImportHandlerPtr(mediaTypeData->m_importHandler->Create()));
 
       // if processing the task failed remove the import
-      s_logger->info("starting import removal task for {} items from {}...",
+      GetLogger()->info("starting import removal task for {} items from {}...",
                      mediaTypeData->m_mediaType.c_str(), import);
       if (!ProcessTask(removalTask))
-        s_logger->warn("import removal task for {} items from {} failed",
+        GetLogger()->warn("import removal task for {} items from {} failed",
                        mediaTypeData->m_mediaType.c_str(), import);
 
       delete removalTask;
@@ -656,7 +651,7 @@ bool CMediaImportTaskProcessorJob::AddImport(const CMediaImport& import,
 {
   if (m_importHandlerManager == nullptr)
   {
-    s_logger->error("invalid media import handler manager implementation");
+    GetLogger()->error("invalid media import handler manager implementation");
     return false;
   }
 
@@ -730,4 +725,9 @@ bool CMediaImportTaskProcessorJob::AddImport(const CMediaImport& import,
   }
 
   return true;
+}
+
+Logger CMediaImportTaskProcessorJob::GetLogger()
+{
+  return CServiceBroker::GetLogging().GetLogger("CMediaImportTaskProcessorJob");
 }

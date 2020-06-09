@@ -107,6 +107,8 @@ protected:
 
   bool AddImport(const CMediaImport& import, std::vector<MediaImportTaskType> tasksToBeProcessed);
 
+  static Logger GetLogger();
+
   const IMediaImporterManager* m_importerManager;
   const IMediaImportHandlerManager* m_importHandlerManager;
   IMediaImportTaskCallback* m_callback;
@@ -135,6 +137,4 @@ protected:
   using MediaImportTaskKey = std::pair<std::string, GroupedMediaTypes>;
   std::map<MediaImportTaskKey, MediaImportTaskData> m_importTaskData;
   std::vector<MediaImportTaskType> m_taskTypesToBeProcessed;
-
-  static Logger s_logger;
 };
