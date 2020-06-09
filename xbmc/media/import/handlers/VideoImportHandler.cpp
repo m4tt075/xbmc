@@ -20,7 +20,7 @@
 #include <algorithm>
 
 CVideoImportHandler::CVideoImportHandler(const IMediaImportHandlerManager* importHandlerManager)
-  : IMediaImportHandler(importHandlerManager), CStaticLoggerBase("CVideoImportHandler")
+  : IMediaImportHandler(importHandlerManager)
 {
 }
 
@@ -97,8 +97,8 @@ MediaImportChangesetType CVideoImportHandler::DetermineChangeset(const CMediaImp
   // retrieve all details for the previously imported item
   if (!m_thumbLoader.LoadItem(localItem.get()))
   {
-    s_logger->warn("failed to retrieve details for local item {} during media importing",
-                   localItem->GetVideoInfoTag()->GetPath());
+    GetLogger()->warn("failed to retrieve details for local item {} during media importing",
+                      localItem->GetVideoInfoTag()->GetPath());
   }
 
   // compare the previously imported item with the newly imported item
@@ -397,4 +397,10 @@ void CVideoImportHandler::RemoveAutoArtwork(CGUIListItem::ArtMap& artwork,
     else
       ++art;
   }
+}
+
+Logger CVideoImportHandler::GetLogger()
+{
+  static Logger s_logger = CServiceBroker::GetLogging().GetLogger("CVideoImportHandler");
+  return s_logger;
 }

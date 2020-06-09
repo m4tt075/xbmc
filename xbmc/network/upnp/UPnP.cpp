@@ -31,7 +31,6 @@
 #include "profiles/ProfileManager.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
-#include "utils/StaticLoggerBase.h"
 #include "utils/StringUtils.h"
 #include "utils/SystemInfo.h"
 #include "utils/TimeUtils.h"
@@ -164,12 +163,12 @@ public:
 |   CMediaBrowser class
 +---------------------------------------------------------------------*/
 class CMediaBrowser : public PLT_SyncMediaBrowser,
-                      public PLT_MediaContainerChangesListener,
-                      protected CStaticLoggerBase
+                      public PLT_MediaContainerChangesListener
 {
 public:
   explicit CMediaBrowser(PLT_CtrlPointReference& ctrlPoint)
-    : PLT_SyncMediaBrowser(ctrlPoint, true), CStaticLoggerBase("UPNP::CMediaBrowser")
+    : PLT_SyncMediaBrowser(ctrlPoint, true),
+      m_logger(CServiceBroker::GetLogging().GetLogger("UPNP::CMediaBrowser"))
   {
     SetContainerListener(this);
     }
@@ -218,7 +217,7 @@ public:
             path += id.c_str();
         }
 
-        s_logger->debug("notified container update {}", (const char*)path);
+        m_logger->debug("notified container update {}", (const char*)path);
         CGUIMessage message(GUI_MSG_NOTIFY_ALL, 0, 0, GUI_MSG_UPDATE_PATH);
         message.SetStringParam(path.GetChars());
         CServiceBroker::GetGUI()->GetWindowManager().SendThreadMessage(message);
@@ -232,7 +231,7 @@ public:
             return SaveFileState(temp, CBookmark(), watched);
         }
         else {
-          s_logger->debug("Marking video item {} as watched", item.GetPath());
+          m_logger->debug("Marking video item {} as watched", item.GetPath());
 
           std::set<std::pair<NPT_String, NPT_String> > values;
           values.insert(std::make_pair("<upnp:playCount>1</upnp:playCount>",
@@ -250,7 +249,7 @@ public:
 
         std::set<std::pair<NPT_String, NPT_String> > values;
         if (item.GetVideoInfoTag()->GetResumePoint().timeInSeconds != bookmark.timeInSeconds) {
-          s_logger->debug("Updating resume point for item {}", path);
+          m_logger->debug("Updating resume point for item {}", path);
           long time = (long)bookmark.timeInSeconds;
           if (time < 0)
             time = 0;
@@ -270,7 +269,7 @@ public:
           values.insert(std::make_pair(curr_value, new_value));
         }
         if (updatePlayCount) {
-          s_logger->debug("Marking video item {} as watched", path);
+          m_logger->debug("Marking video item {} as watched", path);
           values.insert(std::make_pair("<upnp:playCount>0</upnp:playCount>",
                                        "<upnp:playCount>1</upnp:playCount>"));
         }
@@ -336,7 +335,7 @@ public:
         PLT_ActionReference action;
         NPT_String curr_value, new_value;
 
-        s_logger->debug("attempting to invoke UpdateObject for {}", id);
+        m_logger->debug("attempting to invoke UpdateObject for {}", id);
 
         // check this server supports UpdateObject action
         NPT_CHECK_LABEL(FindServer(url.GetHostName().c_str(), device),failed);
@@ -366,11 +365,11 @@ public:
 
         NPT_CHECK_LABEL(m_CtrlPoint->InvokeAction(action, NULL),failed);
 
-        s_logger->debug("invoked UpdateObject successfully");
+        m_logger->debug("invoked UpdateObject successfully");
         return true;
 
     failed:
-      s_logger->info("invoking UpdateObject failed");
+      m_logger->info("invoking UpdateObject failed");
       return false;
     }
 
@@ -379,6 +378,8 @@ private:
     {
       return StringUtils::Format("upnp://%s", device->GetUUID().GetChars());
     }
+
+    Logger m_logger;
 };
 
 

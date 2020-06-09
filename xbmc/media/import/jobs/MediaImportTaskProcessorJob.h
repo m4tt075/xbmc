@@ -17,7 +17,7 @@
 #include "media/import/MediaImport.h"
 #include "media/import/MediaImportChangesetTypes.h"
 #include "media/import/jobs/MediaImportTaskTypes.h"
-#include "utils/StaticLoggerBase.h"
+#include "utils/logtypes.h"
 
 #include <string>
 #include <vector>
@@ -28,7 +28,7 @@ class CMediaImportSource;
 class IMediaImportTask;
 class IMediaImportTaskCallback;
 
-class CMediaImportTaskProcessorJob : public CLibraryJob, protected CStaticLoggerBase
+class CMediaImportTaskProcessorJob : public CLibraryJob
 {
 public:
   virtual ~CMediaImportTaskProcessorJob();
@@ -106,6 +106,8 @@ protected:
   bool OnTaskComplete(bool success, const IMediaImportTask* task);
 
   bool AddImport(const CMediaImport& import, std::vector<MediaImportTaskType> tasksToBeProcessed);
+
+  static Logger GetLogger();
 
   const IMediaImporterManager* m_importerManager;
   const IMediaImportHandlerManager* m_importHandlerManager;

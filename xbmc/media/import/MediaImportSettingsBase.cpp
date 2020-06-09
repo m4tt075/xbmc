@@ -8,12 +8,13 @@
 
 #include "MediaImportSettingsBase.h"
 
+#include "ServiceBroker.h"
 #include "settings/lib/SettingsManager.h"
 #include "utils/XBMCTinyXML.h"
 #include "utils/log.h"
 
 CMediaImportSettingsBase::CMediaImportSettingsBase(const std::string& settingValues /* = "" */)
-  : CSettingsBase(), CStaticLoggerBase("CMediaImportSettingsBase"), m_settingValues(settingValues)
+  : CSettingsBase(), m_settingValues(settingValues)
 {
 }
 
@@ -61,7 +62,7 @@ bool CMediaImportSettingsBase::Load()
   // try to initialize the settings by loading its definitions
   if (!Initialize())
   {
-    s_logger->error("failed to initialize settings");
+    GetLogger()->error("failed to initialize settings");
     return false;
   }
 
@@ -71,8 +72,8 @@ bool CMediaImportSettingsBase::Load()
     CXBMCTinyXML xmlValues;
     if (!xmlValues.Parse(m_settingValues, TIXML_ENCODING_UTF8))
     {
-      s_logger->error("error loading setting values, Line {}\n{}", xmlValues.ErrorRow(),
-                      xmlValues.ErrorDesc());
+      GetLogger()->error("error loading setting values, Line {}\n{}", xmlValues.ErrorRow(),
+                         xmlValues.ErrorDesc());
       Uninitialize();
       return false;
     }
@@ -80,7 +81,7 @@ bool CMediaImportSettingsBase::Load()
     bool updated;
     if (!LoadValuesFromXml(xmlValues, updated))
     {
-      s_logger->error("failed to load setting values");
+      GetLogger()->error("failed to load setting values");
       Uninitialize();
       return false;
     }
@@ -194,8 +195,8 @@ bool CMediaImportSettingsBase::InitializeDefinitions()
     CXBMCTinyXML xmlDefinition;
     if (!xmlDefinition.Parse(settingDefinition, TIXML_ENCODING_UTF8))
     {
-      s_logger->error("error loading settings definition, Line {}\n{}", xmlDefinition.ErrorRow(),
-                      xmlDefinition.ErrorDesc());
+      GetLogger()->error("error loading settings definition, Line {}\n{}", xmlDefinition.ErrorRow(),
+                         xmlDefinition.ErrorDesc());
       return false;
     }
 
@@ -231,4 +232,10 @@ void CMediaImportSettingsBase::InitializeConditions()
   for (const auto condition : m_complexConditions)
     GetSettingsManager()->AddDynamicCondition(condition.first, std::get<0>(condition.second),
                                               std::get<1>(condition.second));
+}
+
+Logger CMediaImportSettingsBase::GetLogger()
+{
+  static Logger s_logger = CServiceBroker::GetLogging().GetLogger("CMediaImportSettingsBase");
+  return s_logger;
 }
