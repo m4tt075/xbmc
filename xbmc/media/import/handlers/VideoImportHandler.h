@@ -10,13 +10,13 @@
 
 #include "dbwrappers/Database.h"
 #include "media/import/IMediaImportHandler.h"
-#include "utils/StaticLoggerBase.h"
+#include "utils/logtypes.h"
 #include "video/VideoDatabase.h"
 #include "video/VideoThumbLoader.h"
 
 class CFileItem;
 
-class CVideoImportHandler : public IMediaImportHandler, protected CStaticLoggerBase
+class CVideoImportHandler : public IMediaImportHandler
 {
 public:
   virtual ~CVideoImportHandler() = default;
@@ -67,6 +67,8 @@ protected:
 
   static void RemoveAutoArtwork(CGUIListItem::ArtMap& artwork,
                                 const std::set<std::string>& parentPrefixes);
+
+  static Logger GetLogger();
 
   mutable CVideoDatabase m_db;
   CVideoThumbLoader m_thumbLoader;

@@ -12,7 +12,7 @@
 #include "settings/SettingsBase.h"
 #include "settings/lib/SettingConditions.h"
 #include "settings/lib/SettingDefinitions.h"
-#include "utils/StaticLoggerBase.h"
+#include "utils/logtypes.h"
 
 #include <set>
 #include <string>
@@ -22,8 +22,7 @@ class CSettingSection;
 class CSettingsManager;
 
 class CMediaImportSettingsBase : public CSettingsBase,
-                                 public CSettingControlCreator,
-                                 protected CStaticLoggerBase
+                                 public CSettingControlCreator
 {
 public:
   explicit CMediaImportSettingsBase(const std::string& settingValues = "");
@@ -73,6 +72,8 @@ protected:
   using CSettingsBase::Uninitialize;
 
 private:
+  static Logger GetLogger();
+
   mutable std::string m_settingValues;
   std::set<std::string> m_settingDefinitions;
 
