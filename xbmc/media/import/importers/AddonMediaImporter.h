@@ -16,7 +16,6 @@
 #include "media/import/importers/BaseMediaImporter.h"
 #include "settings/lib/SettingDefinitions.h"
 #include "settings/lib/SettingType.h"
-#include "utils/StaticLoggerBase.h"
 #include "utils/logtypes.h"
 
 #include <memory>
@@ -84,8 +83,7 @@ private:
 
 class CAddonMediaImporter : public CAddonMediaImporterBase,
                             public CBaseMediaImporter,
-                            public ADDON::IAddonSettingsCallbackExecutor,
-                            protected CStaticLoggerBase
+                            public ADDON::IAddonSettingsCallbackExecutor
 {
 public:
   using HandleType = CAddonMediaImporterExecutor::HandleType;
@@ -247,6 +245,8 @@ private:
       HandleType handle,
       bool success,
       CAddonMediaImporterExecutor::Action action) throw(InvalidAddonMediaImporterHandleException);
+
+  static Logger GetLogger();
 
   bool m_settingsLoaded = false;
 
