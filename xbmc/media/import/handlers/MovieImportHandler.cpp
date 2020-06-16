@@ -10,6 +10,7 @@
 
 #include "FileItem.h"
 #include "media/import/MediaImport.h"
+#include "utils/log.h"
 #include "video/VideoDatabase.h"
 
 bool CMovieImportHandler::AddImportedItem(const CMediaImport& import, CFileItem* item)
@@ -22,7 +23,11 @@ bool CMovieImportHandler::AddImportedItem(const CMediaImport& import, CFileItem*
   item->GetVideoInfoTag()->m_iDbId =
       m_db.SetDetailsForMovie(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt());
   if (item->GetVideoInfoTag()->m_iDbId <= 0)
+  {
+    m_logger->error("failed to set details for added movie \"{}\" imported from {}",
+                    item->GetLabel(), import.GetPath());
     return false;
+  }
 
   SetDetailsForFile(item, false);
   return SetImportForItem(item, import);
@@ -35,7 +40,11 @@ bool CMovieImportHandler::UpdateImportedItem(const CMediaImport& import, CFileIt
 
   if (m_db.SetDetailsForMovie(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt(),
                               item->GetVideoInfoTag()->m_iDbId) <= 0)
+  {
+    m_logger->error("failed to set details for movie \"{}\" imported from {}", item->GetLabel(),
+                    import.GetPath());
     return false;
+  }
 
   if (import.Settings()->UpdatePlaybackMetadataFromSource())
     SetDetailsForFile(item, true);
@@ -63,7 +72,10 @@ bool CMovieImportHandler::GetLocalItems(CVideoDatabase& videodb,
           "videodb://movies/titles/?imported&import=" + CURL::Encode(import.GetPath()),
           CDatabase::Filter(), movies, SortDescription(),
           import.Settings()->UpdateImportedMediaItems() ? VideoDbDetailsAll : VideoDbDetailsNone))
+  {
+    m_logger->error("failed to get previously imported movies from {}", import.GetPath());
     return false;
+  }
 
   items.insert(items.begin(), movies.cbegin(), movies.cend());
 

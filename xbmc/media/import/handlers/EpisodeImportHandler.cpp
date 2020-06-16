@@ -14,6 +14,7 @@
 #include "media/import/MediaImport.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
+#include "utils/log.h"
 
 std::string CEpisodeImportHandler::GetItemLabel(const CFileItem* item) const
 {
@@ -33,21 +34,31 @@ bool CEpisodeImportHandler::StartSynchronisation(const CMediaImport& import)
   if (!CVideoImportHandler::StartSynchronisation(import))
     return false;
 
-  // create a map of tvshows imported from the same source
-  CFileItemList tvshows;
-  if (!m_db.GetTvShowsByWhere("videodb://tvshows/titles/?imported", CDatabase::Filter(), tvshows))
+  if (m_importHandlerManager == nullptr)
     return false;
 
-  m_tvshows.clear();
+  MediaImportHandlerConstPtr tvshowHandlerCreator =
+      m_importHandlerManager->GetImportHandler(MediaTypeTvShow);
+  if (tvshowHandlerCreator == nullptr)
+    return false;
 
-  TvShowsMap::iterator tvshowsIter;
-  for (int tvshowsIndex = 0; tvshowsIndex < tvshows.Size(); tvshowsIndex++)
+  MediaImportHandlerPtr tvshowHandler(tvshowHandlerCreator->Create());
+  if (tvshowHandler == nullptr)
+    return false;
+
+  // get all previously imported tvshows
+  std::vector<CFileItemPtr> tvshows;
+  if (!tvshowHandler->GetLocalItems(import, tvshows))
+    return false;
+
+  // create a map of tvshows imported from the same source
+  m_tvshows.clear();
+  for (const auto tvshow : tvshows)
   {
-    CFileItemPtr tvshow = tvshows.Get(tvshowsIndex);
     if (!tvshow->HasVideoInfoTag() || tvshow->GetVideoInfoTag()->m_strTitle.empty())
       continue;
 
-    tvshowsIter = m_tvshows.find(tvshow->GetVideoInfoTag()->m_strTitle);
+    auto tvshowsIter = m_tvshows.find(tvshow->GetVideoInfoTag()->m_strTitle);
     if (tvshowsIter == m_tvshows.end())
     {
       TvShowsSet tvshowsSet;
@@ -73,7 +84,8 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
   // try to find an existing tvshow that the episode belongs to
   episode->m_iIdShow = FindTvShowId(item);
 
-  // if the tvshow doesn't exist, create a very basic version of it with the info we got from the episode
+  // if the tvshow doesn't exist, create a very basic version of it with the info we got from the
+  // episode
   if (episode->m_iIdShow <= 0)
   {
     CVideoInfoTag tvshow;
@@ -120,6 +132,12 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
       {
         MediaImportHandlerPtr tvshowHandler(tvshowHandlerCreator->Create());
         tvshowImported = tvshowHandler->AddImportedItem(import, tvshowItem.get());
+        if (!tvshowImported)
+        {
+          m_logger->warn("failed to add tvshow \"{}\" imported from {}", tvshow.m_strTitle,
+                         import.GetPath());
+          return false;
+        }
       }
     }
 
@@ -131,6 +149,12 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
       tvshow.m_iDbId = tvshow.m_iIdShow =
           m_db.SetDetailsForTvShow(tvshowPaths, tvshow, CGUIListItem::ArtMap(),
                                    std::map<int, std::map<std::string, std::string>>());
+      if (tvshow.m_iDbId <= 0)
+      {
+        m_logger->error("failed to set details for added tvshow \"{}\" imported from {}",
+                        tvshow.m_strTitle, import.GetPath());
+        return false;
+      }
     }
 
     // store the tvshow's database ID in the episode
@@ -151,7 +175,12 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
   episode->m_iDbId =
       m_db.SetDetailsForEpisode(item->GetPath(), *episode, item->GetArt(), episode->m_iIdShow);
   if (episode->m_iDbId <= 0)
+  {
+    m_logger->error(
+        "failed to set details for added episode \"{}\" S{:02d}E{:02d} imported from {}",
+        episode->m_strShowTitle, episode->m_iSeason, episode->m_iEpisode, import.GetPath());
     return false;
+  }
 
   SetDetailsForFile(item, false);
   return SetImportForItem(item, import);
@@ -162,10 +191,16 @@ bool CEpisodeImportHandler::UpdateImportedItem(const CMediaImport& import, CFile
   if (item == nullptr || !item->HasVideoInfoTag() || item->GetVideoInfoTag()->m_iDbId <= 0)
     return false;
 
-  if (m_db.SetDetailsForEpisode(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt(),
-                                item->GetVideoInfoTag()->m_iIdShow,
-                                item->GetVideoInfoTag()->m_iDbId) <= 0)
+  const auto episode = item->GetVideoInfoTag();
+
+  if (m_db.SetDetailsForEpisode(item->GetPath(), *episode, item->GetArt(), episode->m_iIdShow,
+                                episode->m_iDbId) <= 0)
+  {
+    m_logger->error(
+        "failed to set details for added episode \"{}\" S{:02d}E{:02d} imported from {}",
+        episode->m_strShowTitle, episode->m_iSeason, episode->m_iEpisode, import.GetPath());
     return false;
+  }
 
   if (import.Settings()->UpdatePlaybackMetadataFromSource())
     SetDetailsForFile(item, true);
@@ -193,7 +228,10 @@ bool CEpisodeImportHandler::GetLocalItems(CVideoDatabase& videodb,
           "videodb://tvshows/titles/-1/-1/?imported&import=" + CURL::Encode(import.GetPath()),
           CDatabase::Filter(), episodes, false, SortDescription(),
           import.Settings()->UpdateImportedMediaItems() ? VideoDbDetailsAll : VideoDbDetailsNone))
+  {
+    m_logger->error("failed to get previously imported episodes from {}", import.GetPath());
     return false;
+  }
 
   items.insert(items.begin(), episodes.cbegin(), episodes.cend());
 

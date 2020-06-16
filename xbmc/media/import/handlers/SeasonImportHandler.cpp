@@ -14,6 +14,7 @@
 #include "media/import/MediaImport.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
+#include "utils/log.h"
 #include "video/VideoDatabase.h"
 
 #include <algorithm>
@@ -68,21 +69,31 @@ bool CSeasonImportHandler::StartSynchronisation(const CMediaImport& import)
   if (!CVideoImportHandler::StartSynchronisation(import))
     return false;
 
-  // create a map of tvshows imported from the same source
-  CFileItemList tvshows;
-  if (!m_db.GetTvShowsByWhere("videodb://tvshows/titles/?imported", CDatabase::Filter(), tvshows))
+  if (m_importHandlerManager == nullptr)
     return false;
 
-  m_tvshows.clear();
+  MediaImportHandlerConstPtr tvshowHandlerCreator =
+      m_importHandlerManager->GetImportHandler(MediaTypeTvShow);
+  if (tvshowHandlerCreator == nullptr)
+    return false;
 
-  TvShowsMap::iterator tvshowsIter;
-  for (int tvshowsIndex = 0; tvshowsIndex < tvshows.Size(); tvshowsIndex++)
+  MediaImportHandlerPtr tvshowHandler(tvshowHandlerCreator->Create());
+  if (tvshowHandler == nullptr)
+    return false;
+
+  // get all previously imported tvshows
+  std::vector<CFileItemPtr> tvshows;
+  if (!tvshowHandler->GetLocalItems(import, tvshows))
+    return false;
+
+  // create a map of tvshows imported from the same source
+  m_tvshows.clear();
+  for (const auto tvshow : tvshows)
   {
-    CFileItemPtr tvshow = tvshows.Get(tvshowsIndex);
     if (!tvshow->HasVideoInfoTag() || tvshow->GetVideoInfoTag()->m_strTitle.empty())
       continue;
 
-    tvshowsIter = m_tvshows.find(tvshow->GetVideoInfoTag()->m_strTitle);
+    auto tvshowsIter = m_tvshows.find(tvshow->GetVideoInfoTag()->m_strTitle);
     if (tvshowsIter == m_tvshows.end())
     {
       TvShowsSet tvshowsSet;
@@ -108,7 +119,8 @@ bool CSeasonImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
   // try to find an existing tvshow that the season belongs to
   season->m_iIdShow = FindTvShowId(item);
 
-  // if the tvshow doesn't exist, create a very basic version of it with the info we got from the season
+  // if the tvshow doesn't exist, create a very basic version of it with the info we got from the
+  // season
   if (season->m_iIdShow <= 0)
   {
     CVideoInfoTag tvshow;
@@ -183,7 +195,11 @@ bool CSeasonImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
   {
     season->m_iDbId = m_db.SetDetailsForSeason(*season, item->GetArt(), season->m_iIdShow);
     if (season->m_iDbId <= 0)
+    {
+      m_logger->error("failed to set details for added \"{}\" season {} imported from {}",
+                      season->m_strShowTitle, season->m_iSeason, import.GetPath());
       return false;
+    }
   }
 
   return SetImportForItem(item, import);
@@ -194,9 +210,16 @@ bool CSeasonImportHandler::UpdateImportedItem(const CMediaImport& import, CFileI
   if (item == nullptr || !item->HasVideoInfoTag() || item->GetVideoInfoTag()->m_iDbId <= 0)
     return false;
 
-  return m_db.SetDetailsForSeason(*(item->GetVideoInfoTag()), item->GetArt(),
-                                  item->GetVideoInfoTag()->m_iIdShow,
-                                  item->GetVideoInfoTag()->m_iDbId) > 0;
+  const auto season = item->GetVideoInfoTag();
+
+  if (m_db.SetDetailsForSeason(*season, item->GetArt(), season->m_iIdShow, season->m_iDbId) <= 0)
+  {
+    m_logger->error("failed to set details for \"{}\" season {} imported from {}",
+                    season->m_strShowTitle, season->m_iSeason, import.GetPath());
+    return false;
+  }
+
+  return true;
 }
 
 bool CSeasonImportHandler::RemoveImportedItem(const CMediaImport& import, const CFileItem* item)
@@ -225,20 +248,30 @@ bool CSeasonImportHandler::CleanupImportedItems(const CMediaImport& import)
     if (!importedSeason->HasVideoInfoTag() || importedSeason->GetVideoInfoTag()->m_iIdShow <= 0)
       continue;
 
+    const auto videoInfoTag = importedSeason->GetVideoInfoTag();
+
     // get all episodes of the season of the tvshow
     CVideoDbUrl videoUrl;
-    if (!videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/{}/",
-                                                 importedSeason->GetVideoInfoTag()->m_iIdShow,
-                                                 importedSeason->GetVideoInfoTag()->m_iSeason)))
+    if (!videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/{}/?imported",
+                                                 videoInfoTag->m_iIdShow, videoInfoTag->m_iSeason)))
+    {
+      m_logger->warn("failed to prepare videodb:// URL for \"{}\" season {} imported from {}",
+                     videoInfoTag->m_strShowTitle, videoInfoTag->m_iSeason, import.GetPath());
       continue;
-    videoUrl.AddOption("tvshowid", importedSeason->GetVideoInfoTag()->m_iIdShow);
+    }
+    videoUrl.AddOption("tvshowid", videoInfoTag->m_iIdShow);
     if (importedSeason->GetVideoInfoTag()->m_iSeason >= -1)
-      videoUrl.AddOption("season", importedSeason->GetVideoInfoTag()->m_iSeason);
+      videoUrl.AddOption("season", videoInfoTag->m_iSeason);
+    videoUrl.AddOption("import", import.GetPath());
 
     CFileItemList episodes;
     if (!m_db.GetEpisodesByWhere(videoUrl.ToString(), CDatabase::Filter(), episodes, true,
                                  SortDescription(), false))
+    {
+      m_logger->warn("failed to get episodes for \"{}\" season {} imported from {}",
+                     videoInfoTag->m_strShowTitle, videoInfoTag->m_iSeason, import.GetPath());
       continue;
+    }
 
     // loop through all episodes and count the imported ones
     bool hasImportedEpisodes = false;
@@ -251,7 +284,7 @@ bool CSeasonImportHandler::CleanupImportedItems(const CMediaImport& import)
       }
     }
 
-    // if there no imported episodes we can remove the tvshow
+    // if there are no imported episodes we can remove the season
     if (!hasImportedEpisodes)
       RemoveImportedItem(m_db, import, importedSeason.get());
   }
@@ -269,7 +302,10 @@ bool CSeasonImportHandler::GetLocalItems(CVideoDatabase& videodb,
   if (!videodb.GetSeasonsByWhere("videodb://tvshows/titles/-1/?imported&showempty=true&import=" +
                                      CURL::Encode(import.GetPath()),
                                  CDatabase::Filter(), seasons, true))
+  {
+    m_logger->error("failed to get previously imported seasons from {}", import.GetPath());
     return false;
+  }
 
   items.insert(items.begin(), seasons.cbegin(), seasons.cend());
 
