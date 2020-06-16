@@ -70,8 +70,6 @@ bool updateProvider(const MediaProvider* provider)
   if (!mediaImportManager.GetSource(updatedSource->GetIdentifier(), source))
     return false;
 
-  if (updatedSource->GetBasePath().empty())
-    source.SetBasePath(updatedSource->GetBasePath());
   if (!updatedSource->GetFriendlyName().empty())
     source.SetFriendlyName(updatedSource->GetFriendlyName());
   if (!updatedSource->GetIconUrl().empty())

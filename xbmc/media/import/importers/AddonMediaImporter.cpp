@@ -116,7 +116,7 @@ void CAddonMediaImporterDiscoverer::Start()
   {
     // automatically add the add-on as a provider
     const auto& id = mediaImporter->ID();
-    CMediaImportSource source(id, "plugin://" + id, mediaImporter->Name(), mediaImporter->Icon(),
+    CMediaImportSource source(id, mediaImporter->Name(), mediaImporter->Icon(),
                               mediaImporter->SupportedMediaTypes());
     source.SetImporterId(id);
 
@@ -204,8 +204,7 @@ bool CAddonMediaImporter::DiscoverSource(CMediaImportSource& source)
 
 bool CAddonMediaImporter::LookupSource(const CMediaImportSource& source)
 {
-  if (source.GetIdentifier().empty() || source.GetBasePath().empty() ||
-      !CAddonMediaImporterBase::CanLookupSource())
+  if (source.GetIdentifier().empty() || !CAddonMediaImporterBase::CanLookupSource())
     return false;
 
   CAddonMediaImporterExecutor executor(m_addonId, CAddonMediaImporterExecutor::Action::LookupSource,
@@ -246,7 +245,7 @@ bool CAddonMediaImporter::IsSourceReady(CMediaImportSource& source)
 bool CAddonMediaImporter::IsImportReady(CMediaImport& import)
 {
   CUrlOptions urlOptions;
-  urlOptions.AddOption("path", import.GetPath());
+  urlOptions.AddOption("provider", import.GetSource().GetIdentifier());
   urlOptions.AddOption("mediatypes", import.GetMediaTypes());
 
   CAddonMediaImporterExecutor executor(m_addonId,
@@ -302,7 +301,7 @@ bool CAddonMediaImporter::LoadImportSettings(CMediaImport& import)
   m_settingsLoaded = false;
 
   CUrlOptions urlOptions;
-  urlOptions.AddOption("path", import.GetPath());
+  urlOptions.AddOption("provider", import.GetSource().GetIdentifier());
   urlOptions.AddOption("mediatypes", import.GetMediaTypes());
 
   CAddonMediaImporterExecutor executor(
@@ -362,7 +361,7 @@ bool CAddonMediaImporter::Import(CMediaImportImportItemsRetrievalTask* task)
   auto import = task->GetImport();
 
   CUrlOptions urlOptions;
-  urlOptions.AddOption("path", import.GetPath());
+  urlOptions.AddOption("provider", import.GetSource().GetIdentifier());
   urlOptions.AddOption("mediatypes", import.GetMediaTypes());
 
   CAddonMediaImporterExecutor executor(m_addonId, CAddonMediaImporterExecutor::Action::Import,
@@ -382,7 +381,6 @@ bool CAddonMediaImporter::UpdateOnSource(CMediaImportUpdateTask* task)
 
   CUrlOptions urlOptions;
   urlOptions.AddOption("provider", import.GetSource().GetIdentifier());
-  urlOptions.AddOption("path", import.GetPath());
   urlOptions.AddOption("mediatypes", import.GetMediaTypes());
 
   CAddonMediaImporterExecutor executor(m_addonId,

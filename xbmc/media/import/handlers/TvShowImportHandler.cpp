@@ -17,6 +17,8 @@
 
 #include <algorithm>
 
+#include <fmt/ostream.h>
+
 /*!
  * Checks whether two tvshows are the same by comparing them by title and year
  */
@@ -127,7 +129,7 @@ bool CTvShowImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
   if (info->m_iDbId <= 0)
   {
     m_logger->error("failed to set details for added tvshow \"{}\" imported from {}",
-                    info->m_strTitle, import.GetPath());
+                    info->m_strTitle, import);
     return false;
   }
 
@@ -148,7 +150,7 @@ bool CTvShowImportHandler::UpdateImportedItem(const CMediaImport& import, CFileI
       0)
   {
     m_logger->error("failed to set details for tvshow \"{}\" imported from {}", tvshow->m_strTitle,
-                    import.GetPath());
+                    import);
     return false;
   }
 
@@ -167,7 +169,7 @@ bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const 
   if (!m_db.GetPathsForTvShow(tvshow->m_iDbId, tvshowPaths))
   {
     m_logger->error("failed to get paths for tvshow \"{}\" imported from {}", tvshow->m_strTitle,
-                    import.GetPath());
+                    import);
     return false;
   }
 
@@ -175,7 +177,7 @@ bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const 
   if (tvshowPaths.empty())
   {
     m_logger->warn("tvshow \"{}\" imported from {} doesn't have any paths", tvshow->m_strTitle,
-                   import.GetPath());
+                   import);
     return false;
   }
 
@@ -186,15 +188,16 @@ bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const 
 
   for (const auto& tvshowPath : tvshowPaths)
   {
-    // TODO(Montellese): THIS DOESN'T WORK!!!
+    /* TODO(Montellese): THIS DOESN'T WORK!!!
     // check if the tvshow path is a sub-path of the media import
-    if (URIUtils::PathHasParent(tvshowPath.second, import.GetPath().c_str()))
+    if (URIUtils::PathHasParent(tvshowPath.second, import.c_str()))
     {
       // remove the path from the tvshow
       m_db.RemovePathFromTvShow(tvshow->m_iDbId, tvshowPath.first);
       m_db.RemoveImportFromItem(tvshow->m_iDbId, GetMediaType(), import);
       break;
     }
+    */
   }
 
   return true;
@@ -220,22 +223,18 @@ bool CTvShowImportHandler::CleanupImportedItems(const CMediaImport& import)
 
     // get all episodes of the tvshow
     CVideoDbUrl videoUrl;
-    if (!videoUrl.FromString(
-            StringUtils::Format("videodb://tvshows/titles/{}/-1/?imported", tvshow->m_iDbId)))
-    {
-      m_logger->warn("failed to prepare videodb:// URL for all episodes of \"{}\" imported from {}",
-                     tvshow->m_strShowTitle, import.GetPath());
-      continue;
-    }
+    videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/-1/", tvshow->m_iDbId));
     videoUrl.AddOption("tvshowid", tvshow->m_iDbId);
-    videoUrl.AddOption("import", import.GetPath());
+    videoUrl.AddOption("imported", true);
+    videoUrl.AddOption("source", import.GetSource().GetIdentifier());
+    videoUrl.AddOption("import", import.GetMediaTypesAsString());
 
     CFileItemList episodes;
     if (!m_db.GetEpisodesByWhere(videoUrl.ToString(), CDatabase::Filter(), episodes, true,
                                  SortDescription(), false))
     {
       m_logger->warn("failed to get episodes for \"{}\" imported from {}", tvshow->m_strShowTitle,
-                     import.GetPath());
+                     import);
       continue;
     }
 
@@ -253,13 +252,19 @@ bool CTvShowImportHandler::GetLocalItems(CVideoDatabase& videodb,
                                          const CMediaImport& import,
                                          std::vector<CFileItemPtr>& items) const
 {
+  CVideoDbUrl videoUrl;
+  videoUrl.FromString("videodb://tvshows/titles/");
+  videoUrl.AddOption("imported", true);
+  videoUrl.AddOption("source", import.GetSource().GetIdentifier());
+  videoUrl.AddOption("import", import.GetMediaTypesAsString());
+
   CFileItemList tvshows;
   if (!videodb.GetTvShowsByWhere(
-          "videodb://tvshows/titles/?imported&import=" + CURL::Encode(import.GetPath()),
+          videoUrl.ToString(),
           CDatabase::Filter(), tvshows, SortDescription(),
           import.Settings()->UpdateImportedMediaItems() ? VideoDbDetailsAll : VideoDbDetailsNone))
   {
-    m_logger->error("failed to get previously imported tvshows from {}", import.GetPath());
+    m_logger->error("failed to get previously imported tvshows from {}", import);
     return false;
   }
 

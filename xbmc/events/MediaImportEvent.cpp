@@ -102,6 +102,6 @@ bool CMediaImportEvent::Execute() const
   if (!CanExecute())
     return false;
 
-  return CServiceBroker::GetMediaImportManager().Import(m_import.GetPath(),
+  return CServiceBroker::GetMediaImportManager().Import(m_import.GetSource().GetIdentifier(),
                                                         m_import.GetMediaTypes());
 }

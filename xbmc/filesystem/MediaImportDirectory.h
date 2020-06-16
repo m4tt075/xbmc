@@ -18,12 +18,10 @@
 const std::string PROPERTY_SOURCE_IDENTIFIER = "Source.ID";
 const std::string PROPERTY_SOURCE_NAME = "Source.Name";
 const std::string PROPERTY_SOURCE_PROTOCOL = "Source.Protocol";
-const std::string PROPERTY_SOURCE_BASEPATH = "Source.BasePath";
 const std::string PROPERTY_SOURCE_MEDIATYPES_LABEL = "Source.MediaTypesLabel";
 const std::string PROPERTY_SOURCE_ISACTIVE = "Source.Active";
 const std::string PROPERTY_SOURCE_ISACTIVE_LABEL = "Source.ActiveLabel";
 const std::string PROPERTY_SOURCE_ISREADY = "Source.Ready";
-const std::string PROPERTY_IMPORT_PATH = "Import.Path";
 const std::string PROPERTY_IMPORT_NAME = "Import.Name";
 const std::string PROPERTY_IMPORT_MEDIATYPES = "Import.MediaTypes";
 

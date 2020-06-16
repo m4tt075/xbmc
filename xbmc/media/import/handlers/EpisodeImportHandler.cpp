@@ -16,6 +16,8 @@
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 
+#include <fmt/ostream.h>
+
 std::string CEpisodeImportHandler::GetItemLabel(const CFileItem* item) const
 {
   if (item != nullptr && item->HasVideoInfoTag() &&
@@ -120,7 +122,6 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
     CFileItemPtr tvshowItem(new CFileItem(tvshow));
     tvshowItem->SetPath(tvshow.m_strPath);
     tvshowItem->SetSource(item->GetSource());
-    tvshowItem->SetImportPath(item->GetImportPath());
 
     // try to use a tvshow-specific import handler
     bool tvshowImported = false;
@@ -135,7 +136,7 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
         if (!tvshowImported)
         {
           m_logger->warn("failed to add tvshow \"{}\" imported from {}", tvshow.m_strTitle,
-                         import.GetPath());
+                         import);
           return false;
         }
       }
@@ -152,7 +153,7 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
       if (tvshow.m_iDbId <= 0)
       {
         m_logger->error("failed to set details for added tvshow \"{}\" imported from {}",
-                        tvshow.m_strTitle, import.GetPath());
+                        tvshow.m_strTitle, import);
         return false;
       }
     }
@@ -178,7 +179,7 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
   {
     m_logger->error(
         "failed to set details for added episode \"{}\" S{:02d}E{:02d} imported from {}",
-        episode->m_strShowTitle, episode->m_iSeason, episode->m_iEpisode, import.GetPath());
+        episode->m_strShowTitle, episode->m_iSeason, episode->m_iEpisode, import);
     return false;
   }
 
@@ -198,7 +199,7 @@ bool CEpisodeImportHandler::UpdateImportedItem(const CMediaImport& import, CFile
   {
     m_logger->error(
         "failed to set details for added episode \"{}\" S{:02d}E{:02d} imported from {}",
-        episode->m_strShowTitle, episode->m_iSeason, episode->m_iEpisode, import.GetPath());
+        episode->m_strShowTitle, episode->m_iSeason, episode->m_iEpisode, import);
     return false;
   }
 
@@ -223,13 +224,19 @@ bool CEpisodeImportHandler::GetLocalItems(CVideoDatabase& videodb,
                                           const CMediaImport& import,
                                           std::vector<CFileItemPtr>& items) const
 {
+  CVideoDbUrl videoUrl;
+  videoUrl.FromString("videodb://tvshows/titles/-1/-1/");
+  videoUrl.AddOption("imported", true);
+  videoUrl.AddOption("source", import.GetSource().GetIdentifier());
+  videoUrl.AddOption("import", import.GetMediaTypesAsString());
+
   CFileItemList episodes;
   if (!videodb.GetEpisodesByWhere(
-          "videodb://tvshows/titles/-1/-1/?imported&import=" + CURL::Encode(import.GetPath()),
+          videoUrl.ToString(),
           CDatabase::Filter(), episodes, false, SortDescription(),
           import.Settings()->UpdateImportedMediaItems() ? VideoDbDetailsAll : VideoDbDetailsNone))
   {
-    m_logger->error("failed to get previously imported episodes from {}", import.GetPath());
+    m_logger->error("failed to get previously imported episodes from {}", import);
     return false;
   }
 

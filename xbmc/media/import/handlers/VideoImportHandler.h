@@ -70,8 +70,7 @@ protected:
 
   mutable CVideoDatabase m_db;
   CVideoThumbLoader m_thumbLoader;
-  std::set<std::string> m_sourcePaths;
-  std::map<std::string, int> m_importPathIds;
+  std::map<std::string, int> m_sourceIds;
 
   Logger m_logger;
 };
