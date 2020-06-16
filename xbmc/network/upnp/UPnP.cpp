@@ -184,7 +184,7 @@ public:
         {
           std::string sourceID = getSourceID(device);
           CServiceBroker::GetMediaImportManager().AddAndActivateSource(
-              CUPnPMediaImporterBase::IDENTIFICATION, sourceID, sourceID,
+              CUPnPMediaImporterBase::IDENTIFICATION, sourceID,
               device->GetFriendlyName().GetChars(), device->GetIconUrl("image/png").GetChars(),
               {MediaTypeMovie, MediaTypeMusicVideo, MediaTypeTvShow, MediaTypeSeason,
                MediaTypeEpisode});

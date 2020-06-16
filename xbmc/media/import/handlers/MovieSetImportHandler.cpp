@@ -13,6 +13,8 @@
 #include "utils/log.h"
 #include "video/VideoDatabase.h"
 
+#include <fmt/ostream.h>
+
 CFileItemPtr CMovieSetImportHandler::FindMatchingLocalItem(
     const CMediaImport& import,
     const CFileItem* item,
@@ -44,7 +46,7 @@ bool CMovieSetImportHandler::AddImportedItem(const CMediaImport& import, CFileIt
   if (item->GetVideoInfoTag()->m_iDbId <= 0)
   {
     GetLogger()->error("failed to set details for added movie set \"{}\" imported from {}",
-                       item->GetLabel(), import.GetPath());
+                       item->GetLabel(), import);
     return false;
   }
 
@@ -60,7 +62,7 @@ bool CMovieSetImportHandler::UpdateImportedItem(const CMediaImport& import, CFil
                                  item->GetVideoInfoTag()->m_iDbId) <= 0)
   {
     GetLogger()->error("failed to set details for movie set \"{}\" imported from {}",
-                       item->GetLabel(), import.GetPath());
+                       item->GetLabel(), import);
     return false;
   }
 
@@ -81,12 +83,17 @@ bool CMovieSetImportHandler::GetLocalItems(CVideoDatabase& videodb,
                                            const CMediaImport& import,
                                            std::vector<CFileItemPtr>& items) const
 {
+  CVideoDbUrl videoUrl;
+  videoUrl.FromString("videodb://movies/sets/");
+  videoUrl.AddOption("imported", true);
+  videoUrl.AddOption("source", import.GetSource().GetIdentifier());
+  videoUrl.AddOption("import", import.GetMediaTypesAsString());
+
   CFileItemList movieSets;
-  if (!videodb.GetSetsByWhere("videodb://movies/sets/?imported&import=" +
-                                  CURL::Encode(import.GetPath()),
+  if (!videodb.GetSetsByWhere(videoUrl.ToString(),
                               CDatabase::Filter(), movieSets, false))
   {
-    GetLogger()->error("failed to get previously imported movie sets from {}", import.GetPath());
+    GetLogger()->error("failed to get previously imported movie sets from {}", import);
     return false;
   }
 

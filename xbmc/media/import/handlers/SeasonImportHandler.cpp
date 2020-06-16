@@ -19,6 +19,8 @@
 
 #include <algorithm>
 
+#include <fmt/ostream.h>
+
 typedef std::set<CFileItemPtr> TvShowsSet;
 typedef std::map<std::string, TvShowsSet> TvShowsMap;
 
@@ -146,7 +148,6 @@ bool CSeasonImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
     CFileItemPtr tvshowItem(new CFileItem(tvshow));
     tvshowItem->SetPath(tvshow.m_strPath);
     tvshowItem->SetSource(item->GetSource());
-    tvshowItem->SetImportPath(item->GetImportPath());
 
     // try to use a tvshow-specific import handler
     bool tvshowImported = false;
@@ -197,7 +198,7 @@ bool CSeasonImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
     if (season->m_iDbId <= 0)
     {
       GetLogger()->error("failed to set details for added \"{}\" season {} imported from {}",
-                         season->m_strShowTitle, season->m_iSeason, import.GetPath());
+                         season->m_strShowTitle, season->m_iSeason, import);
       return false;
     }
   }
@@ -215,7 +216,7 @@ bool CSeasonImportHandler::UpdateImportedItem(const CMediaImport& import, CFileI
   if (m_db.SetDetailsForSeason(*season, item->GetArt(), season->m_iIdShow, season->m_iDbId) <= 0)
   {
     GetLogger()->error("failed to set details for \"{}\" season {} imported from {}",
-                       season->m_strShowTitle, season->m_iSeason, import.GetPath());
+                       season->m_strShowTitle, season->m_iSeason, import);
     return false;
   }
 
@@ -252,24 +253,22 @@ bool CSeasonImportHandler::CleanupImportedItems(const CMediaImport& import)
 
     // get all episodes of the season of the tvshow
     CVideoDbUrl videoUrl;
-    if (!videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/{}/?imported",
-                                                 videoInfoTag->m_iIdShow, videoInfoTag->m_iSeason)))
-    {
-      GetLogger()->warn("failed to prepare videodb:// URL for \"{}\" season {} imported from {}",
-                        videoInfoTag->m_strShowTitle, videoInfoTag->m_iSeason, import.GetPath());
-      continue;
-    }
+    videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/{}/",
+                                            videoInfoTag->m_iIdShow, videoInfoTag->m_iSeason));
     videoUrl.AddOption("tvshowid", videoInfoTag->m_iIdShow);
     if (importedSeason->GetVideoInfoTag()->m_iSeason >= -1)
       videoUrl.AddOption("season", videoInfoTag->m_iSeason);
-    videoUrl.AddOption("import", import.GetPath());
+    videoUrl.AddOption("imported", true);
+    videoUrl.AddOption("source", import.GetSource().GetIdentifier());
+    videoUrl.AddOption("import", import.GetMediaTypesAsString());
+
 
     CFileItemList episodes;
     if (!m_db.GetEpisodesByWhere(videoUrl.ToString(), CDatabase::Filter(), episodes, true,
                                  SortDescription(), false))
     {
       GetLogger()->warn("failed to get episodes for \"{}\" season {} imported from {}",
-                        videoInfoTag->m_strShowTitle, videoInfoTag->m_iSeason, import.GetPath());
+                        videoInfoTag->m_strShowTitle, videoInfoTag->m_iSeason, import);
       continue;
     }
 
@@ -298,12 +297,17 @@ bool CSeasonImportHandler::GetLocalItems(CVideoDatabase& videodb,
                                          const CMediaImport& import,
                                          std::vector<CFileItemPtr>& items) const
 {
+  CVideoDbUrl videoUrl;
+  videoUrl.FromString("videodb://tvshows/titles/-1");
+  videoUrl.AddOption("showempty", true);
+  videoUrl.AddOption("imported", true);
+  videoUrl.AddOption("source", import.GetSource().GetIdentifier());
+  videoUrl.AddOption("import", import.GetMediaTypesAsString());
+
   CFileItemList seasons;
-  if (!videodb.GetSeasonsByWhere("videodb://tvshows/titles/-1/?imported&showempty=true&import=" +
-                                     CURL::Encode(import.GetPath()),
-                                 CDatabase::Filter(), seasons, true))
+  if (!videodb.GetSeasonsByWhere(videoUrl.ToString(), CDatabase::Filter(), seasons, true))
   {
-    GetLogger()->error("failed to get previously imported seasons from {}", import.GetPath());
+    GetLogger()->error("failed to get previously imported seasons from {}", import);
     return false;
   }
 

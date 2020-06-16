@@ -254,19 +254,18 @@ void CGUIDialogMediaImportInfo::InitializeMediaImportSourceSettings()
 
 bool CGUIDialogMediaImportInfo::SetMediaImport(const CFileItemPtr& item)
 {
-  if (!item->HasProperty(PROPERTY_SOURCE_IDENTIFIER) || !item->HasProperty(PROPERTY_IMPORT_PATH) ||
-      !item->HasProperty(PROPERTY_IMPORT_MEDIATYPES))
+  if (!item->HasProperty(PROPERTY_SOURCE_IDENTIFIER) || !item->HasProperty(PROPERTY_IMPORT_MEDIATYPES))
     return false;
 
-  std::string importPath = item->GetProperty(PROPERTY_IMPORT_PATH).asString();
-  GroupedMediaTypes mediaTypes =
+  const auto sourceId = item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString();
+  const auto mediaTypes =
       CMediaTypes::Split(item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).asString());
-  if (importPath.empty() || mediaTypes.empty())
+  if (sourceId.empty() || mediaTypes.empty())
     return false;
 
   // get the import details
   m_import = std::make_shared<CMediaImport>();
-  if (!CServiceBroker::GetMediaImportManager().GetImport(importPath, mediaTypes, *m_import))
+  if (!CServiceBroker::GetMediaImportManager().GetImport(sourceId, mediaTypes, *m_import))
   {
     m_import.reset();
     return false;

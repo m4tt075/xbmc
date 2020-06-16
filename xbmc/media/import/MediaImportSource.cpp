@@ -9,7 +9,6 @@
 #include "MediaImportSource.h"
 
 CMediaImportSource::CMediaImportSource(const std::string& identifier /* = "" */,
-                                       const std::string& basePath /* = "" */,
                                        const std::string& friendlyName /* = "" */,
                                        const std::string& iconUrl /* = "" */,
                                        const MediaTypes& availableMediaTypes /* = MediaTypes() */,
@@ -18,7 +17,6 @@ CMediaImportSource::CMediaImportSource(const std::string& identifier /* = "" */,
                                        bool manuallyAdded /* = false */,
                                        const std::string& importerId /* = "" */)
   : m_identifier(identifier),
-    m_basePath(basePath),
     m_friendlyName(friendlyName),
     m_iconUrl(iconUrl),
     m_availableMediaTypes(availableMediaTypes),
@@ -33,7 +31,6 @@ CMediaImportSource::CMediaImportSource(const std::string& identifier /* = "" */,
 
 CMediaImportSource::CMediaImportSource(const CMediaImportSource& other)
   : m_identifier(other.m_identifier),
-    m_basePath(other.m_basePath),
     m_friendlyName(other.m_friendlyName),
     m_iconUrl(other.m_iconUrl),
     m_availableMediaTypes(other.m_availableMediaTypes),
@@ -48,7 +45,7 @@ CMediaImportSource::CMediaImportSource(const CMediaImportSource& other)
 
 bool CMediaImportSource::operator==(const CMediaImportSource& other) const
 {
-  if (m_identifier.compare(other.m_identifier) != 0 || m_basePath.compare(other.m_basePath) != 0 ||
+  if (m_identifier.compare(other.m_identifier) != 0 ||
       m_friendlyName.compare(other.m_friendlyName) != 0 ||
       m_iconUrl.compare(other.m_iconUrl) != 0 ||
       m_availableMediaTypes != other.m_availableMediaTypes ||

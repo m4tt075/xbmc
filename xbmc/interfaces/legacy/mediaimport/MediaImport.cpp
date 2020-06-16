@@ -45,21 +45,14 @@ MediaImport::MediaImport(const CMediaImport& import,
 }
 #endif
 
-MediaImport::MediaImport(const String& importPath)
-  : import(std::make_shared<CMediaImport>(importPath))
+MediaImport::MediaImport()
+  : import(std::make_shared<CMediaImport>()), m_addonMediaImporter(nullptr)
 {
   if (languageHook != nullptr)
     m_addonId = languageHook->GetAddonId();
 
   if (m_addonId.empty())
     throw MissingLanguageHookException("MediaImport");
-
-  import->SetRecursive(true);
-}
-
-String MediaImport::getPath() const
-{
-  return import->GetPath();
 }
 
 MediaProvider* MediaImport::getProvider() const

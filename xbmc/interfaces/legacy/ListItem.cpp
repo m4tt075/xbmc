@@ -873,10 +873,5 @@ namespace XBMCAddon
     {
       return item->GetSource();
     }
-
-    String ListItem::getMediaImportPath() const
-    {
-      return item->GetImportPath();
-    }
   }
 }
