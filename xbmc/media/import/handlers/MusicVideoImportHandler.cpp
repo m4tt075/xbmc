@@ -10,6 +10,7 @@
 
 #include "FileItem.h"
 #include "media/import/MediaImport.h"
+#include "utils/log.h"
 #include "video/VideoDatabase.h"
 
 bool CMusicVideoImportHandler::AddImportedItem(const CMediaImport& import, CFileItem* item)
@@ -22,7 +23,11 @@ bool CMusicVideoImportHandler::AddImportedItem(const CMediaImport& import, CFile
   item->GetVideoInfoTag()->m_iDbId =
       m_db.SetDetailsForMusicVideo(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt());
   if (item->GetVideoInfoTag()->m_iDbId <= 0)
+  {
+    GetLogger()->error("failed to set details for added music video \"{}\" imported from {}",
+                       item->GetLabel(), import.GetPath());
     return false;
+  }
 
   SetDetailsForFile(item, false);
   return SetImportForItem(item, import);
@@ -35,7 +40,11 @@ bool CMusicVideoImportHandler::UpdateImportedItem(const CMediaImport& import, CF
 
   if (m_db.SetDetailsForMusicVideo(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt(),
                                    item->GetVideoInfoTag()->m_iDbId) <= 0)
+  {
+    GetLogger()->error("failed to set details for music video \"{}\" imported from {}",
+                       item->GetLabel(), import.GetPath());
     return false;
+  }
 
   if (import.Settings()->UpdatePlaybackMetadataFromSource())
     SetDetailsForFile(item, true);
@@ -63,7 +72,10 @@ bool CMusicVideoImportHandler::GetLocalItems(CVideoDatabase& videodb,
           "videodb://musicvideos/titles/?imported&import=" + CURL::Encode(import.GetPath()),
           CDatabase::Filter(), musicvideos, true, SortDescription(),
           import.Settings()->UpdateImportedMediaItems() ? VideoDbDetailsAll : VideoDbDetailsNone))
+  {
+    GetLogger()->error("failed to get previously imported seasons from {}", import.GetPath());
     return false;
+  }
 
   items.insert(items.begin(), musicvideos.cbegin(), musicvideos.cend());
 
