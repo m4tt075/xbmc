@@ -113,7 +113,7 @@ void CVideoImportHandler::PrepareImportedItem(const CMediaImport& import,
                                               CFileItem* item,
                                               const CFileItemPtr& localItem) const
 {
-  if (item == nullptr || localItem == nullptr || !localItem->HasVideoInfoTag() ||
+  if (item == nullptr || localItem == nullptr || !item->HasVideoInfoTag() ||
       !localItem->HasVideoInfoTag())
     return;
 
@@ -180,7 +180,10 @@ bool CVideoImportHandler::RemoveImportedItems(const CMediaImport& import)
   if (success)
     m_db.CommitTransaction();
   else
+  {
+    GetLogger()->warn("failed to remove items imported from {}", import.GetPath());
     m_db.RollbackTransaction();
+  }
 
   m_db.Close();
   return success;
@@ -239,8 +242,10 @@ void CVideoImportHandler::PrepareItem(const CMediaImport& import, CFileItem* pIt
   videoInfoTag->m_parentPathID = idPath;
 
   if (!pItem->m_bIsFolder)
+  {
     videoInfoTag->m_iFileId = m_db.AddFile(
         pItem->GetPath(), importPath, videoInfoTag->GetPlayCount(), videoInfoTag->m_lastPlayed);
+  }
 }
 
 void CVideoImportHandler::SetDetailsForFile(const CFileItem* pItem, bool reset)
