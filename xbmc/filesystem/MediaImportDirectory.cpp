@@ -158,7 +158,6 @@ CFileItemPtr CMediaImportDirectory::FileItemFromMediaImportSource(const CMediaIm
 
   item->SetProperty(PROPERTY_SOURCE_IDENTIFIER, source.GetIdentifier());
   item->SetProperty(PROPERTY_SOURCE_NAME, source.GetFriendlyName());
-  item->SetProperty(PROPERTY_SOURCE_BASEPATH, source.GetBasePath());
   item->SetProperty(PROPERTY_SOURCE_ISACTIVE, source.IsActive());
   item->SetProperty(PROPERTY_SOURCE_ISACTIVE_LABEL, source.IsActive()
                                                         ? g_localizeStrings.Get(39576)
@@ -188,14 +187,13 @@ CFileItemPtr CMediaImportDirectory::FileItemFromMediaImport(const CMediaImport& 
                                                             const std::string& basePath,
                                                             bool bySource /* = false */)
 {
-  if (import.GetPath().empty() || import.GetMediaTypes().empty())
+  if (import.GetMediaTypes().empty())
     return CFileItemPtr();
 
   const CMediaImportSource& source = import.GetSource();
 
-  CURL url(URIUtils::AddFileToFolder(basePath, CURL::Encode(import.GetPath())));
-  std::string mediaTypes = CMediaTypes::Join(import.GetMediaTypes());
-  url.SetOption("mediatypes", mediaTypes);
+  CURL url(basePath);
+  url.SetOption("mediatypes", import.GetMediaTypesAsString());
   std::string path = url.Get();
   std::string mediaTypesLabel = CMediaTypes::ToLabel(import.GetMediaTypes());
   std::string label = mediaTypesLabel;
@@ -210,14 +208,12 @@ CFileItemPtr CMediaImportDirectory::FileItemFromMediaImport(const CMediaImport& 
   if (!source.GetIconUrl().empty())
     item->SetArt("thumb", source.GetIconUrl());
 
-  item->SetProperty(PROPERTY_IMPORT_PATH, import.GetPath());
-  item->SetProperty(PROPERTY_IMPORT_MEDIATYPES, mediaTypes);
+  item->SetProperty(PROPERTY_IMPORT_MEDIATYPES, import.GetMediaTypesAsString());
   item->SetProperty(PROPERTY_IMPORT_NAME,
                     StringUtils::Format(g_localizeStrings.Get(39565).c_str(),
                                         source.GetFriendlyName().c_str(), mediaTypesLabel.c_str()));
   item->SetProperty(PROPERTY_SOURCE_IDENTIFIER, source.GetIdentifier());
   item->SetProperty(PROPERTY_SOURCE_NAME, source.GetFriendlyName());
-  item->SetProperty(PROPERTY_SOURCE_BASEPATH, source.GetBasePath());
   item->SetProperty(PROPERTY_SOURCE_ISACTIVE, source.IsActive());
   item->SetProperty(PROPERTY_SOURCE_ISACTIVE_LABEL, source.IsActive()
                                                         ? g_localizeStrings.Get(39576)

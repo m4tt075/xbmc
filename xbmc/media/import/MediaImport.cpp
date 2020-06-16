@@ -195,36 +195,30 @@ bool CMediaImportSettings::HasMediaType(const std::string& condition,
   return true;
 }
 
-CMediaImport::CMediaImport(const std::string& importPath /* = "" */)
-  : CMediaImport(importPath, CMediaImportSource(importPath))
+CMediaImport::CMediaImport(const GroupedMediaTypes& mediaTypes /* = {} */, const std::string& sourceIdentifier /* = "" */)
+  : CMediaImport(mediaTypes, CMediaImportSource(sourceIdentifier))
 {
 }
 
-CMediaImport::CMediaImport(const std::string& importPath, const CMediaImportSource& source)
-  : CMediaImport(importPath, source, {}, true, CDateTime(), "")
+CMediaImport::CMediaImport(const GroupedMediaTypes& mediaTypes, const CMediaImportSource& source)
+  : CMediaImport(mediaTypes, source, CDateTime(), "")
 {
 }
 
-CMediaImport::CMediaImport(const std::string& importPath,
+CMediaImport::CMediaImport(const GroupedMediaTypes& mediaTypes,
                            const CMediaImportSource& source,
-                           const GroupedMediaTypes& importedMediaTypes,
-                           bool recursive,
                            const CDateTime& lastSynced,
                            const std::string& settingValues)
-  : m_importPath(importPath),
-    m_mediaTypes(importedMediaTypes),
+  : m_mediaTypes(mediaTypes),
     m_source(source),
-    m_recursive(recursive),
     m_lastSynced(lastSynced),
     m_settings(std::make_shared<CMediaImportSettings>(m_mediaTypes, settingValues))
 {
 }
 
 CMediaImport::CMediaImport(const CMediaImport& other)
-  : m_importPath(other.m_importPath),
-    m_mediaTypes(other.m_mediaTypes),
+  : m_mediaTypes(other.m_mediaTypes),
     m_source(other.m_source),
-    m_recursive(other.m_recursive),
     m_lastSynced(other.m_lastSynced),
     m_settings(other.m_settings)
 {
@@ -232,9 +226,9 @@ CMediaImport::CMediaImport(const CMediaImport& other)
 
 bool CMediaImport::operator==(const CMediaImport& other) const
 {
-  if (m_importPath.compare(other.m_importPath) != 0 || m_source != other.m_source ||
-      m_mediaTypes != other.m_mediaTypes || m_recursive != other.m_recursive ||
-      m_lastSynced != other.m_lastSynced || *m_settings != *other.m_settings)
+  if (m_source != other.m_source ||
+      m_mediaTypes != other.m_mediaTypes || m_lastSynced != other.m_lastSynced ||
+      *m_settings != *other.m_settings)
     return false;
 
   return true;
@@ -251,6 +245,11 @@ CMediaImport CMediaImport::Clone() const
   return clone;
 }
 
+std::string CMediaImport::GetMediaTypesAsString() const
+{
+  return CMediaTypes::Join(m_mediaTypes);
+}
+
 bool CMediaImport::ContainsMediaType(const GroupedMediaTypes::value_type mediaType) const
 {
   return std::find(m_mediaTypes.cbegin(), m_mediaTypes.cend(), mediaType) != m_mediaTypes.cend();
@@ -258,5 +257,5 @@ bool CMediaImport::ContainsMediaType(const GroupedMediaTypes::value_type mediaTy
 
 std::ostream& operator<<(std::ostream& os, const CMediaImport& import)
 {
-  return os << import.GetPath() << " (" << StringUtils::Join(import.GetMediaTypes(), ", ") << ")";
+  return os << import.GetSource() << " [" << StringUtils::Join(import.GetMediaTypes(), ", ") << "]";
 }

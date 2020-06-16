@@ -19,6 +19,8 @@
 
 #include <algorithm>
 
+#include <fmt/format.h>
+
 CVideoImportHandler::CVideoImportHandler(const IMediaImportHandlerManager* importHandlerManager)
   : IMediaImportHandler(importHandlerManager)
 {
@@ -126,20 +128,17 @@ void CVideoImportHandler::PrepareImportedItem(const CMediaImport& import,
   itemVideoInfoTag->m_iIdSeason = localItemVideoInfoTag->m_iIdSeason;
 
   item->SetSource(localItem->GetSource());
-  item->SetImportPath(localItem->GetImportPath());
   itemVideoInfoTag->m_basePath = localItemVideoInfoTag->m_basePath;
   itemVideoInfoTag->m_parentPathID = localItemVideoInfoTag->m_parentPathID;
 }
 
 bool CVideoImportHandler::StartSynchronisation(const CMediaImport& import)
 {
-  m_sourcePaths.clear();
-  m_importPathIds.clear();
+  m_sourceIds.clear();
 
   if (!m_db.Open())
     return false;
 
-  // TODO(Montellese): is a transaction really needed?
   m_db.BeginTransaction();
 
   CServiceBroker::GetAnnouncementManager()->Announce(ANNOUNCEMENT::VideoLibrary, "OnScanStarted");
@@ -154,12 +153,10 @@ bool CVideoImportHandler::FinishSynchronisation(const CMediaImport& import)
   // now make sure the items are enabled
   SetImportedItemsEnabled(import, true);
 
-  // TODO(Montellese): is a transaction really needed?
   m_db.CommitTransaction();
   m_db.Close();
 
-  m_sourcePaths.clear();
-  m_importPathIds.clear();
+  m_sourceIds.clear();
 
   CServiceBroker::GetAnnouncementManager()->Announce(ANNOUNCEMENT::VideoLibrary, "OnScanFinished");
 
@@ -179,7 +176,7 @@ bool CVideoImportHandler::RemoveImportedItems(const CMediaImport& import)
     m_db.CommitTransaction();
   else
   {
-    GetLogger()->warn("failed to remove items imported from {}", import.GetPath());
+    GetLogger()->warn("failed to remove items imported from {}", import);
     m_db.RollbackTransaction();
   }
 
@@ -204,45 +201,36 @@ bool CVideoImportHandler::RemoveImportedItems(CVideoDatabase& videodb,
 
 void CVideoImportHandler::PrepareItem(const CMediaImport& import, CFileItem* pItem)
 {
-  if (pItem == nullptr || !pItem->HasVideoInfoTag() || import.GetPath().empty() ||
+  if (pItem == nullptr || !pItem->HasVideoInfoTag() || import.GetMediaTypes().empty() ||
       import.GetSource().GetIdentifier().empty())
     return;
 
-  const std::string& sourcePath = import.GetSource().GetBasePath();
-  const std::string& importPath = import.GetPath();
+  const std::string& sourceId = import.GetSource().GetIdentifier();
 
-  // only add the source path to the database if it isn't already known
-  if (m_sourcePaths.find(sourcePath) == m_sourcePaths.end())
-  {
-    m_db.AddPath(sourcePath);
-    m_sourcePaths.insert(sourcePath);
-  }
-
-  // only add the import path to the database if it isn't already known
+  // only add the source identifier to the database if it isn't already known
   int idPath = -1;
-  const auto& importPathId = m_importPathIds.find(importPath);
-  if (importPathId == m_importPathIds.end())
+  const auto& sourcePathId = m_sourceIds.find(sourceId);
+  if (sourcePathId == m_sourceIds.end())
   {
-    idPath = m_db.AddPath(importPath, sourcePath);
-    m_importPathIds.emplace(importPath, idPath);
+    idPath = m_db.AddPath(sourceId);
+    m_sourceIds.emplace(sourceId, idPath);
   }
   else
-    idPath = importPathId->second;
+    idPath = sourcePathId->second;
 
   // set the proper source
   pItem->SetSource(import.GetSource().GetIdentifier());
-  pItem->SetImportPath(importPath);
 
   auto videoInfoTag = pItem->GetVideoInfoTag();
 
   // set the proper base and parent path
-  videoInfoTag->m_basePath = sourcePath;
+  videoInfoTag->m_basePath = sourceId;
   videoInfoTag->m_parentPathID = idPath;
 
   if (!pItem->m_bIsFolder)
   {
     videoInfoTag->m_iFileId = m_db.AddFile(
-        pItem->GetPath(), importPath, videoInfoTag->GetPlayCount(), videoInfoTag->m_lastPlayed);
+        pItem->GetPath(), sourceId, videoInfoTag->GetPlayCount(), videoInfoTag->m_lastPlayed);
   }
 }
 
@@ -261,9 +249,9 @@ void CVideoImportHandler::SetDetailsForFile(const CFileItem* pItem, bool reset)
     m_db.AddBookMarkToFile(pItem->GetPath(), videoInfoTag->GetResumePoint(), CBookmark::RESUME);
 }
 
-bool CVideoImportHandler::SetImportForItem(const CFileItem* pItem, const CMediaImport& import)
+bool CVideoImportHandler::SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idPath /* = -1 */)
 {
-  return m_db.SetImportForItem(pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import);
+  return m_db.SetImportForItem(pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import, idPath);
 }
 
 void CVideoImportHandler::RemoveFile(CVideoDatabase& videodb, const CFileItem* item) const

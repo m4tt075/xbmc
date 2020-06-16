@@ -13,6 +13,8 @@
 #include "utils/log.h"
 #include "video/VideoDatabase.h"
 
+#include <fmt/ostream.h>
+
 bool CMusicVideoImportHandler::AddImportedItem(const CMediaImport& import, CFileItem* item)
 {
   if (item == nullptr)
@@ -25,7 +27,7 @@ bool CMusicVideoImportHandler::AddImportedItem(const CMediaImport& import, CFile
   if (item->GetVideoInfoTag()->m_iDbId <= 0)
   {
     GetLogger()->error("failed to set details for added music video \"{}\" imported from {}",
-                       item->GetLabel(), import.GetPath());
+                       item->GetLabel(), import);
     return false;
   }
 
@@ -42,7 +44,7 @@ bool CMusicVideoImportHandler::UpdateImportedItem(const CMediaImport& import, CF
                                    item->GetVideoInfoTag()->m_iDbId) <= 0)
   {
     GetLogger()->error("failed to set details for music video \"{}\" imported from {}",
-                       item->GetLabel(), import.GetPath());
+                       item->GetLabel(), import);
     return false;
   }
 
@@ -67,13 +69,19 @@ bool CMusicVideoImportHandler::GetLocalItems(CVideoDatabase& videodb,
                                              const CMediaImport& import,
                                              std::vector<CFileItemPtr>& items) const
 {
+  CVideoDbUrl videoUrl;
+  videoUrl.FromString("videodb://musicvideos/titles/");
+  videoUrl.AddOption("imported", true);
+  videoUrl.AddOption("source", import.GetSource().GetIdentifier());
+  videoUrl.AddOption("import", import.GetMediaTypesAsString());
+
   CFileItemList musicvideos;
   if (!videodb.GetMusicVideosByWhere(
-          "videodb://musicvideos/titles/?imported&import=" + CURL::Encode(import.GetPath()),
+          videoUrl.ToString(),
           CDatabase::Filter(), musicvideos, true, SortDescription(),
           import.Settings()->UpdateImportedMediaItems() ? VideoDbDetailsAll : VideoDbDetailsNone))
   {
-    GetLogger()->error("failed to get previously imported seasons from {}", import.GetPath());
+    GetLogger()->error("failed to get previously imported seasons from {}", import);
     return false;
   }
 

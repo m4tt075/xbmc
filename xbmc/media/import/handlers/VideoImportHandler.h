@@ -57,7 +57,7 @@ protected:
 
   void PrepareItem(const CMediaImport& import, CFileItem* pItem);
   void SetDetailsForFile(const CFileItem* pItem, bool reset);
-  bool SetImportForItem(const CFileItem* pItem, const CMediaImport& import);
+  bool SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idPath = -1);
   void RemoveFile(CVideoDatabase& videodb, const CFileItem* item) const;
 
   bool Compare(const CFileItem* originalItem,
@@ -72,6 +72,5 @@ protected:
 
   mutable CVideoDatabase m_db;
   CVideoThumbLoader m_thumbLoader;
-  std::set<std::string> m_sourcePaths;
-  std::map<std::string, int> m_importPathIds;
+  std::map<std::string, int> m_sourceIds;
 };

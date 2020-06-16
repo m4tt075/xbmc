@@ -173,14 +173,12 @@ public:
    *
    * \param importerId Unique identifier of the importer used to add the source
    * \param sourceID Unique identifier of the source
-   * \param basePath Base path (VFS path) of the source
    * \param friendlyName Friendly name of the source
    * \param iconUrl URL to the icon of the source
    * \param mediaTypes Media types supported by the source
    */
   bool AddSource(const std::string& importerId,
                  const std::string& sourceID,
-                 const std::string& basePath,
                  const std::string& friendlyName,
                  const std::string& iconUrl = "",
                  const MediaTypes& mediaTypes = MediaTypes());
@@ -191,14 +189,12 @@ public:
    *
    * \param importerId Unique identifier of the importer used to add the source
    * \param sourceID Unique identifier of the source
-   * \param basePath Base path (VFS path) of the source
    * \param friendlyName Friendly name of the source
    * \param iconUrl URL to the icon of the source
    * \param mediaTypes Media types supported by the source
    */
   bool AddAndActivateSource(const std::string& importerId,
                             const std::string& sourceID,
-                            const std::string& basePath,
                             const std::string& friendlyName,
                             const std::string& iconUrl = "",
                             const MediaTypes& mediaTypes = MediaTypes());
@@ -209,14 +205,12 @@ public:
    *
    * \param importerId Unique identifier of the importer used to add the source
    * \param sourceID Unique identifier of the source
-   * \param basePath Base path (VFS path) of the source
    * \param friendlyName Friendly name of the source
    * \param iconUrl URL to the icon of the source
    * \param mediaTypes Media types supported by the source
    */
   bool AddSourceManually(const std::string& importerId,
                          const std::string& sourceID,
-                         const std::string& basePath,
                          const std::string& friendlyName,
                          const std::string& iconUrl = "",
                          const MediaTypes& mediaTypes = MediaTypes());
@@ -227,14 +221,12 @@ public:
    *
    * \param importerId Unique identifier of the importer used to add the source
    * \param sourceID Unique identifier of the source
-   * \param basePath Base path (VFS path) of the source
    * \param friendlyName Friendly name of the source
    * \param iconUrl URL to the icon of the source
    * \param mediaTypes Media types supported by the source
    */
   bool AddAndActivateSourceManually(const std::string& importerId,
                                     const std::string& sourceID,
-                                    const std::string& basePath,
                                     const std::string& friendlyName,
                                     const std::string& iconUrl = "",
                                     const MediaTypes& mediaTypes = MediaTypes());
@@ -245,15 +237,13 @@ public:
    * If the source is already known all imports from that source are being
    * triggered.
    *
-   * \param sourceID Unique identifier (VFS path) of the source
-   * \param basePath Base path (VFS path) of the source
+   * \param sourceID Unique identifier of the source
    * \param friendlyName Friendly name of the source
    * \param iconUrl URL to the icon of the source
    * \return True if the source was successfully activated, false otherwise
    */
   bool ActivateSource(const std::string& importerId,
                       const std::string& sourceID,
-                      const std::string& basePath = "",
                       const std::string& friendlyName = "",
                       const std::string& iconUrl = "");
   bool ActivateSource(const CMediaImportSource& source);
@@ -377,46 +367,24 @@ public:
   bool HasImports(const CMediaImportSource& source) const;
 
   /*!
-   * \brief Adds a new selective import to the given source for the given path and media type.
-   *
-   * Selective importing means that the given import path must point to a single
-   * item to be imported.
+   * \brief Adds a new import to the given source with the given media type.
    *
    * \param sourceID Source identifier
-   * \param path Path from where to import media items
    * \param mediaTypes Types of the media items to import
    * \return True if the import was successfully added, false otherwise
    */
-  bool AddSelectiveImport(const std::string& sourceID,
-                          const std::string& path,
-                          const GroupedMediaTypes& mediaTypes);
+  bool AddImport(const std::string& sourceID,
+                 const GroupedMediaTypes& mediaTypes);
 
   /*!
-   * \brief Adds a new recursive import to the given source for the given path and media type.
-   *
-   * Recursive importing means that the given import path must be a path to a
-   * directory which can be listed.
+   * \brief Adds new imports to the given source with the given media types.
    *
    * \param sourceID Source identifier
-   * \param path Path from where to import media items
-   * \param mediaTypes Types of the media items to import
-   * \return True if the import was successfully added, false otherwise
-   */
-  bool AddRecursiveImport(const std::string& sourceID,
-                          const std::string& path,
-                          const GroupedMediaTypes& mediaTypes);
-
-  /*!
-   * \brief Adds new recursive imports to the given source for the given path and media types.
-   *
-   * \param sourceID Source identifier
-   * \param path Path from where to import media items
    * \param mediaTypes Set of types of the media items to import
    * \return True if the imports were successfully added, false otherwise
    */
-  bool AddRecursiveImports(const std::string& sourceID,
-                           const std::string& path,
-                           const std::set<GroupedMediaTypes>& mediaTypes);
+  bool AddImports(const std::string& sourceID,
+                  const std::set<GroupedMediaTypes>& mediaTypes);
 
   /*!
    * \brief Updates the details and settings of the given import.
@@ -427,14 +395,14 @@ public:
   bool UpdateImport(const CMediaImport& import);
 
   /*!
-   * \brief Completely removes the import with the given path and media type.
+   * \brief Completely removes the import from the given source with the given media type.
    * 
    * \details Removes the import and all items imported from the import from the libraries.
    *
-   * \param path Path of the import
+   * \param sourceID Source identifier
    * \param mediaTypes Media types of the import
    */
-  void RemoveImport(const std::string& path, const GroupedMediaTypes& mediaTypes);
+  void RemoveImport(const std::string& sourceID, const GroupedMediaTypes& mediaTypes);
 
   /*!
    * \brief Returns a list of all registered media imports.
@@ -456,33 +424,24 @@ public:
   std::vector<CMediaImport> GetImportsBySource(const std::string& sourceID) const;
 
   /*!
-   * \brief Returns a list of media imports belonging to the given path.
+   * \brief Gets the import for the given source and media type.
    *
-   * \param path Path of the imports
-   * \param includeSubDirectories Whether to include subdirectories or not
-   */
-  std::vector<CMediaImport> GetImportsByPath(const std::string& path,
-                                             bool includeSubDirectories = false) const;
-
-  /*!
-   * \brief Gets the import for the given path and media type.
-   *
-   * \param path Path of the import
+   * \param sourceID Source identifier
    * \param mediaTypes Media types of the import
-   * \return True if the import for the given path and media type was found, false otherwise
+   * \return True if the import for the given source and media type was found, false otherwise
    */
-  bool GetImport(const std::string& path,
+  bool GetImport(const std::string& sourceID,
                  const GroupedMediaTypes& mediaTypes,
                  CMediaImport& import) const;
 
   /*
   * \brief Checks if the given import is ready to be processed.
   *
-  * \param path Path of the import to be checked for readiness
+   * \param sourceID Source identifier
    * \param mediaTypes Media types of the import to be checked for readiness
   * \return True if the given import is ready to be processed, false otherwise
   */
-  bool IsImportReady(const std::string& path, const GroupedMediaTypes& mediaTypes) const;
+  bool IsImportReady(const std::string& sourceID, const GroupedMediaTypes& mediaTypes) const;
 
   /*
   * \brief Checks if the given import is ready to be processed.
@@ -491,20 +450,6 @@ public:
   * \return True if the given import is ready to be processed, false otherwise
   */
   bool IsImportReady(const CMediaImport& import) const;
-
-  /*!
-  * \brief Checks if the given path is imported (ignoring parent paths).
-  *
-  * \return True if the given path is imported, false otherwise
-  */
-  bool IsImported(const std::string& path) const;
-
-  /*!
-   * \brief Checks if the given path or any of its parent paths is imported.
-   *
-   * \return True if the given path is imported, false otherwise
-   */
-  bool IsImportedInHierarchy(const std::string& path) const;
 
   /*!
    * \brief Import media items from all registered sources and imports.
@@ -522,13 +467,13 @@ public:
   bool Import(const std::string& sourceID);
 
   /*!
-   * \brief Import media items of the given media type from the given path.
+   * \brief Import media items of the given media type from the given source.
    *
-   * \param path Path from where media items will be imported
+   * \param sourceID Unique identifier of the source
    * \param mediaTypes media types to import
    * \return True if the import of media items has been started, false otherwise
    */
-  bool Import(const std::string& path, const GroupedMediaTypes& mediaTypes);
+  bool Import(const std::string& sourceID, const GroupedMediaTypes& mediaTypes);
 
   /*!
    * \brief Adds the given items as imported items from the given media import.
@@ -619,12 +564,8 @@ private:
   void UpdateManuallyAddedSources();
   bool LookupSource(const CMediaImportSource& source);
 
-  bool AddImport(const std::string& sourceID,
-                 const std::string& path,
-                 const GroupedMediaTypes& mediaTypes,
-                 bool recursive);
   bool AddImport(const CMediaImport& import);
-  bool FindImport(const std::string& path,
+  bool FindImport(const std::string& sourceID,
                   const GroupedMediaTypes& mediaTypes,
                   CMediaImport& import) const;
 

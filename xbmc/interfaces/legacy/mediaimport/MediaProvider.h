@@ -77,7 +77,6 @@ public:
 #endif
 
   MediaProvider(const String& identifier,
-                const String& basePath = emptyString,
                 const String& friendlyName = emptyString,
                 const String& iconUrl = emptyString,
                 const MediaTypes& mediaTypes = {},
@@ -110,58 +109,6 @@ public:
   getIdentifier();
 #else
   String getIdentifier() const;
-#endif
-
-#ifdef DOXYGEN_SHOULD_USE_THIS
-  ///
-  /// \ingroup python_xbmcmediaimport_mediaimport
-  /// @brief \python_func{ getBasePath() }
-  ///-----------------------------------------------------------------------
-  /// Returns the media provider's base path.
-  ///
-  /// @return  Base path of the media provider
-  ///
-  ///
-  ///-----------------------------------------------------------------------
-  /// @python_v19
-  ///
-  /// **Example:**
-  /// ~~~~~~~~~~~~~{.py}
-  /// ...
-  /// # getBasePath()
-  /// basePath = mediaProvider.getBasePath()
-  /// ...
-  /// ~~~~~~~~~~~~~
-  ///
-  getBasePath();
-#else
-  String getBasePath() const;
-#endif
-
-#ifdef DOXYGEN_SHOULD_USE_THIS
-  ///
-  /// \ingroup python_xbmcmediaimport_mediaimport
-  /// @brief \python_func{ setBasePath(basePath) }
-  ///-----------------------------------------------------------------------
-  /// Sets the media provider's base path.
-  ///
-  /// @param basePath  string or unicode - base path of the media provider.
-  ///
-  ///
-  ///-----------------------------------------------------------------------
-  /// @python_v19
-  ///
-  /// **Example:**
-  /// ~~~~~~~~~~~~~{.py}
-  /// ...
-  /// # setBasePath(basePath)
-  /// mediaProvider.setBasePath('http://localhost/')
-  /// ...
-  /// ~~~~~~~~~~~~~
-  ///
-  setBasePath(...);
-#else
-  void setBasePath(const String& basePath);
 #endif
 
 #ifdef DOXYGEN_SHOULD_USE_THIS

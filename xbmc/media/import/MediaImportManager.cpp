@@ -532,12 +532,11 @@ GroupedMediaTypes CMediaImportManager::GetGroupedMediaTypes(const MediaType& med
 
 bool CMediaImportManager::AddSource(const std::string& importerId,
                                     const std::string& sourceID,
-                                    const std::string& basePath,
                                     const std::string& friendlyName,
                                     const std::string& iconUrl /* = "" */,
                                     const MediaTypes& mediaTypes /* = MediaTypes() */)
 {
-  CMediaImportSource source(sourceID, basePath, friendlyName, iconUrl, mediaTypes);
+  CMediaImportSource source(sourceID, friendlyName, iconUrl, mediaTypes);
   source.SetImporterId(importerId);
   return AddSource(source);
 }
@@ -549,12 +548,11 @@ bool CMediaImportManager::AddSource(const CMediaImportSource& source)
 
 bool CMediaImportManager::AddAndActivateSource(const std::string& importerId,
                                                const std::string& sourceID,
-                                               const std::string& basePath,
                                                const std::string& friendlyName,
                                                const std::string& iconUrl /* = "" */,
                                                const MediaTypes& mediaTypes /* = MediaTypes() */)
 {
-  CMediaImportSource source(sourceID, basePath, friendlyName, iconUrl, mediaTypes);
+  CMediaImportSource source(sourceID, friendlyName, iconUrl, mediaTypes);
   source.SetImporterId(importerId);
   return AddAndActivateSource(source);
 }
@@ -566,12 +564,11 @@ bool CMediaImportManager::AddAndActivateSource(const CMediaImportSource& source)
 
 bool CMediaImportManager::AddSourceManually(const std::string& importerId,
                                             const std::string& sourceID,
-                                            const std::string& basePath,
                                             const std::string& friendlyName,
                                             const std::string& iconUrl /* = "" */,
                                             const MediaTypes& mediaTypes /* = MediaTypes() */)
 {
-  CMediaImportSource source(sourceID, basePath, friendlyName, iconUrl, mediaTypes);
+  CMediaImportSource source(sourceID, friendlyName, iconUrl, mediaTypes);
   source.SetImporterId(importerId);
   return AddSourceManually(source);
 }
@@ -584,12 +581,11 @@ bool CMediaImportManager::AddSourceManually(const CMediaImportSource& source)
 bool CMediaImportManager::AddAndActivateSourceManually(
     const std::string& importerId,
     const std::string& sourceID,
-    const std::string& basePath,
     const std::string& friendlyName,
     const std::string& iconUrl /* = "" */,
     const MediaTypes& mediaTypes /* = MediaTypes() */)
 {
-  CMediaImportSource source(sourceID, basePath, friendlyName, iconUrl, mediaTypes);
+  CMediaImportSource source(sourceID, friendlyName, iconUrl, mediaTypes);
   source.SetImporterId(importerId);
   return AddAndActivateSourceManually(source);
 }
@@ -601,11 +597,10 @@ bool CMediaImportManager::AddAndActivateSourceManually(const CMediaImportSource&
 
 bool CMediaImportManager::ActivateSource(const std::string& importerId,
                                          const std::string& sourceID,
-                                         const std::string& basePath /* = "" */,
                                          const std::string& friendlyName /* = "" */,
                                          const std::string& iconUrl /* = "" */)
 {
-  CMediaImportSource source(sourceID, basePath, friendlyName, iconUrl);
+  CMediaImportSource source(sourceID, friendlyName, iconUrl);
   source.SetImporterId(importerId);
   return ActivateSource(source);
 }
@@ -899,45 +894,75 @@ bool CMediaImportManager::HasImports(const CMediaImportSource& source) const
   return HasImports(source.GetIdentifier());
 }
 
-bool CMediaImportManager::AddSelectiveImport(const std::string& sourceID,
-                                             const std::string& path,
-                                             const GroupedMediaTypes& mediaTypes)
+bool CMediaImportManager::AddImport(const std::string& sourceID,
+                                    const GroupedMediaTypes& mediaTypes)
 {
-  if (sourceID.empty() || path.empty() || mediaTypes.empty())
+  if (sourceID.empty() || mediaTypes.empty())
   {
-    m_logger->error("unable to add new selective import from source \"{}\" with "
-                    "path \"{}\" and media type \"{}\"",
-                    sourceID, path, CMediaTypes::Join(mediaTypes));
+    m_logger->error("unable to add new import from source \"{}\" with "
+                    "media type \"{}\"",
+                    sourceID, CMediaTypes::Join(mediaTypes));
     return false;
   }
 
-  return AddImport(sourceID, path, mediaTypes, false);
-}
-
-bool CMediaImportManager::AddRecursiveImport(const std::string& sourceID,
-                                             const std::string& path,
-                                             const GroupedMediaTypes& mediaTypes)
-{
-  if (sourceID.empty() || path.empty() || mediaTypes.empty())
+  // check if the import already exists
+  CMediaImport import;
+  if (FindImport(sourceID, mediaTypes, import))
   {
-    m_logger->error("unable to add new recursive import from source \"{}\" with "
-                    "path \"{}\" and media type \"{}\"",
-                    sourceID, path, CMediaTypes::Join(mediaTypes));
+    m_logger->error("unable to add already existing import from source \"{}\" with "
+                    "media type \"{}\"",
+                    sourceID, CMediaTypes::Join(mediaTypes));
     return false;
   }
 
-  return AddImport(sourceID, path, mediaTypes, true);
+  // check if the given source exists
+  CMediaImportSource source(sourceID);
+  {
+    CSingleLock sourcesLock(m_sourcesLock);
+    if (!GetSourceInternal(sourceID, source))
+    {
+      m_logger->warn("trying to add new import from unknown source \"{}\"", sourceID);
+      return false;
+    }
+  }
+
+  {
+    CSingleLock importHandlersLock(m_importHandlersLock);
+    for (const auto& mediaType : mediaTypes)
+    {
+      // check if there's an import handler that can handle the given media type
+      if (m_importHandlersMap.find(mediaType) == m_importHandlersMap.end())
+      {
+        m_logger->error("unable to add new import from source \"{}\" with "
+                        "media type \"{}\" because there is no matching import handler available",
+                        sourceID, mediaType);
+        return false;
+      }
+    }
+  }
+
+  CMediaImport newImport(mediaTypes, source);
+  if (!AddImport(newImport))
+  {
+    m_logger->error("failed to add new import for source \"{}\" with "
+                    "media type \"{}\" to any import repository",
+                    sourceID, CMediaTypes::Join(mediaTypes));
+    return false;
+  }
+
+  OnImportAdded(newImport);
+
+  return true;
 }
 
-bool CMediaImportManager::AddRecursiveImports(const std::string& sourceID,
-                                              const std::string& path,
-                                              const std::set<GroupedMediaTypes>& mediaTypes)
+bool CMediaImportManager::AddImports(const std::string& sourceID,
+                                     const std::set<GroupedMediaTypes>& mediaTypes)
 {
-  if (sourceID.empty() || path.empty() || mediaTypes.empty())
+  if (sourceID.empty() || mediaTypes.empty())
   {
-    m_logger->error("unable to add new recursive imports from source \"{}\" with "
-                    "path \"{}\" and media types ({})",
-                    sourceID, path, mediaTypes.size());
+    m_logger->error("unable to add new imports from source \"{}\" with "
+                    "media types ({})",
+                    sourceID, mediaTypes.size());
     return false;
   }
 
@@ -960,11 +985,11 @@ bool CMediaImportManager::AddRecursiveImports(const std::string& sourceID,
     {
       // check if the import already exists
       CMediaImport import;
-      if (FindImport(path, itMediaTypes, import))
+      if (FindImport(sourceID, itMediaTypes, import))
       {
         m_logger->error("unable to add already existing recursive import from "
-                        "source \"{}\" with path \"{}\" and media type \"{}\"",
-                        sourceID, path, CMediaTypes::Join(itMediaTypes));
+                        "source \"{}\" with media type \"{}\"",
+                        sourceID, CMediaTypes::Join(itMediaTypes));
         continue;
       }
 
@@ -975,10 +1000,10 @@ bool CMediaImportManager::AddRecursiveImports(const std::string& sourceID,
         if (m_importHandlersMap.find(mediaType) == m_importHandlersMap.end())
         {
           m_logger->error(
-              "unable to add new recursive import from source \"{}\" "
-              "with path \"{}\" and media type \"{}\" because there is no matching import "
+              "unable to add new import from source \"{}\" "
+              "with media type \"{}\" because there is no matching import "
               "handler available",
-              sourceID, path, mediaType);
+              sourceID, mediaType);
           mediaTypesHandled = false;
           break;
         }
@@ -987,12 +1012,12 @@ bool CMediaImportManager::AddRecursiveImports(const std::string& sourceID,
       if (!mediaTypesHandled)
         continue;
 
-      CMediaImport newImport = CMediaImport::CreateRecursive(path, itMediaTypes, source);
+      CMediaImport newImport(itMediaTypes, source);
       if (!AddImport(newImport))
       {
         m_logger->error("failed to add new recursive import for source \"{}\" with "
-                        "path \"{}\" and media type \"{}\" to any import repository",
-                        sourceID, path, CMediaTypes::Join(itMediaTypes));
+                        "media type \"{}\" to any import repository",
+                        sourceID, CMediaTypes::Join(itMediaTypes));
         continue;
       }
 
@@ -1008,7 +1033,7 @@ bool CMediaImportManager::AddRecursiveImports(const std::string& sourceID,
 
 bool CMediaImportManager::UpdateImport(const CMediaImport& import)
 {
-  if (import.GetPath().empty() || import.GetMediaTypes().empty())
+  if (!import.IsValid())
     return false;
 
   bool success = false;
@@ -1111,42 +1136,21 @@ std::vector<CMediaImport> CMediaImportManager::GetImportsBySource(const std::str
   return imports;
 }
 
-std::vector<CMediaImport> CMediaImportManager::GetImportsByPath(
-    const std::string& path, bool includeSubDirectories /* = false */) const
-{
-  std::vector<CMediaImport> imports;
-  if (path.empty())
-    return imports;
-
-  {
-    CSingleLock importRepositoriesLock(m_importRepositoriesLock);
-    for (const auto& repository : m_importRepositories)
-    {
-      std::vector<CMediaImport> repoImports =
-          repository->GetImportsByPath(path, includeSubDirectories);
-      imports.insert(imports.end(), repoImports.begin(), repoImports.end());
-    }
-  }
-
-  PrepareImports(imports);
-  return imports;
-}
-
-bool CMediaImportManager::GetImport(const std::string& path,
+bool CMediaImportManager::GetImport(const std::string& sourceID,
                                     const GroupedMediaTypes& mediaTypes,
                                     CMediaImport& import) const
 {
-  if (path.empty())
+  if (sourceID.empty() || mediaTypes.empty())
     return false;
 
-  return FindImport(path, mediaTypes, import);
+  return FindImport(sourceID, mediaTypes, import);
 }
 
-bool CMediaImportManager::IsImportReady(const std::string& path,
+bool CMediaImportManager::IsImportReady(const std::string& sourceID,
                                         const GroupedMediaTypes& mediaTypes) const
 {
-  CMediaImport import(path);
-  return GetImport(path, mediaTypes, import) && IsImportReady(import);
+  CMediaImport import(mediaTypes, sourceID);
+  return GetImport(sourceID, mediaTypes, import) && IsImportReady(import);
 }
 
 bool CMediaImportManager::IsImportReady(const CMediaImport& import) const
@@ -1158,16 +1162,6 @@ bool CMediaImportManager::IsImportReady(const CMediaImport& import) const
 
   CMediaImport tmpImport(import);
   return importer->IsImportReady(tmpImport);
-}
-
-bool CMediaImportManager::IsImported(const std::string& path) const
-{
-  return !GetImportsByPath(path, false).empty();
-}
-
-bool CMediaImportManager::IsImportedInHierarchy(const std::string& path) const
-{
-  return !GetImportsByPath(path, true).empty();
 }
 
 bool CMediaImportManager::Import()
@@ -1396,8 +1390,6 @@ bool CMediaImportManager::ActivateSourceAsync(const CMediaImportSource& source)
   }
 
   // update any provided values from the existing source
-  if (!source.GetBasePath().empty())
-    updatedSource.SetBasePath(source.GetBasePath());
   if (!source.GetFriendlyName().empty())
     updatedSource.SetFriendlyName(source.GetFriendlyName());
   if (!source.GetIconUrl().empty())
@@ -1534,66 +1526,6 @@ bool CMediaImportManager::LookupSource(const CMediaImportSource& source)
   return importer->LookupSource(source);
 }
 
-bool CMediaImportManager::AddImport(const std::string& sourceID,
-                                    const std::string& path,
-                                    const GroupedMediaTypes& mediaTypes,
-                                    bool recursive)
-{
-  // check if the import already exists
-  CMediaImport import;
-  if (FindImport(path, mediaTypes, import))
-  {
-    m_logger->error("unable to add already existing import from source \"{}\" with "
-                    "path \"{}\" and media type \"{}\"",
-                    sourceID, path, CMediaTypes::Join(mediaTypes));
-    return false;
-  }
-
-  // check if the given source exists
-  CMediaImportSource source(sourceID);
-  {
-    CSingleLock sourcesLock(m_sourcesLock);
-    if (!GetSourceInternal(sourceID, source))
-    {
-      m_logger->warn("trying to add new import from unknown source \"{}\"", sourceID);
-      return false;
-    }
-  }
-
-  {
-    CSingleLock importHandlersLock(m_importHandlersLock);
-    for (const auto& mediaType : mediaTypes)
-    {
-      // check if there's an import handler that can handle the given media type
-      if (m_importHandlersMap.find(mediaType) == m_importHandlersMap.end())
-      {
-        m_logger->error("unable to add new import from source \"{}\" with path \"{}\" and "
-                        "media type \"{}\" because there is no matching import handler available",
-                        sourceID, path, mediaType);
-        return false;
-      }
-    }
-  }
-
-  CMediaImport newImport;
-  if (recursive)
-    newImport = CMediaImport::CreateRecursive(path, mediaTypes, source);
-  else
-    newImport = CMediaImport::CreateSelective(path, mediaTypes, source);
-
-  if (!AddImport(newImport))
-  {
-    m_logger->error("failed to add new import for source \"{}\" with path \"{}\" "
-                    "and media type \"{}\" to any import repository",
-                    sourceID, path, CMediaTypes::Join(mediaTypes));
-    return false;
-  }
-
-  OnImportAdded(newImport);
-
-  return true;
-}
-
 bool CMediaImportManager::AddImport(const CMediaImport& import)
 {
   bool success = false;
@@ -1619,15 +1551,15 @@ bool CMediaImportManager::AddImport(const CMediaImport& import)
   return true;
 }
 
-bool CMediaImportManager::FindImport(const std::string& path,
+bool CMediaImportManager::FindImport(const std::string& sourceID,
                                      const GroupedMediaTypes& mediaTypes,
                                      CMediaImport& import) const
 {
   CSingleLock repositoriesLock(m_importRepositoriesLock);
   // try to find the import in at least one of the repositories
   return std::any_of(m_importRepositories.begin(), m_importRepositories.end(),
-                     [&path, &mediaTypes, &import](const MediaImportRepositoryPtr& repository) {
-                       return repository->GetImport(path, mediaTypes, import);
+                     [&sourceID, &mediaTypes, &import](const MediaImportRepositoryPtr& repository) {
+                       return repository->GetImport(sourceID, mediaTypes, import);
                      });
 }
 
@@ -1635,7 +1567,7 @@ bool CMediaImportManager::AddImportedItems(const CMediaImport& import, const CFi
 {
   // make sure the import is known
   CMediaImport tmpImport;
-  if (!FindImport(import.GetPath(), import.GetMediaTypes(), tmpImport))
+  if (!FindImport(import.GetSource().GetIdentifier(), import.GetMediaTypes(), tmpImport))
     return false;
 
   ChangesetItems changedItems;
@@ -1672,7 +1604,7 @@ bool CMediaImportManager::UpdateImportedItems(const CMediaImport& import,
 {
   // make sure the import is known
   CMediaImport tmpImport;
-  if (!FindImport(import.GetPath(), import.GetMediaTypes(), tmpImport))
+  if (!FindImport(import.GetSource().GetIdentifier(), import.GetMediaTypes(), tmpImport))
     return false;
 
   ChangesetItems changedItems;
@@ -1709,7 +1641,7 @@ bool CMediaImportManager::RemoveImportedItems(const CMediaImport& import,
 {
   // make sure the import is known
   CMediaImport tmpImport;
-  if (!FindImport(import.GetPath(), import.GetMediaTypes(), tmpImport))
+  if (!FindImport(import.GetSource().GetIdentifier(), import.GetMediaTypes(), tmpImport))
     return false;
 
   ChangesetItems changedItems;
@@ -1746,7 +1678,7 @@ bool CMediaImportManager::ChangeImportedItems(const CMediaImport& import,
 {
   // make sure the import is known
   CMediaImport tmpImport;
-  if (!FindImport(import.GetPath(), import.GetMediaTypes(), tmpImport))
+  if (!FindImport(import.GetSource().GetIdentifier(), import.GetMediaTypes(), tmpImport))
     return false;
 
   ChangesetItems changedItems;
@@ -1784,7 +1716,6 @@ bool CMediaImportManager::UpdateImportedItemOnSource(const CFileItem& item)
     return false;
 
   std::string sourceID = item.GetSource();
-  std::string importPath = item.GetImportPath();
 
   if (!IsMediaTypeSupported(item.GetMediaType()))
   {
@@ -1802,28 +1733,28 @@ bool CMediaImportManager::UpdateImportedItemOnSource(const CFileItem& item)
   }
 
   CMediaImport import;
-  if (!FindImport(importPath, mediaTypes, import))
+  if (!FindImport(sourceID, mediaTypes, import))
   {
-    m_logger->warn("unable to update {} due to no import found for {} of {}", item.GetPath(),
-                   importPath, CMediaTypes::Join(mediaTypes));
+    m_logger->warn("unable to update {} due to no import found for {} from {}", item.GetPath(),
+                   sourceID, CMediaTypes::Join(mediaTypes));
     return false;
   }
 
   if (!import.Settings()->UpdatePlaybackMetadataOnSource())
     return false;
 
-  if (!m_sources[import.GetSource().GetIdentifier()].active)
+  if (!m_sources[sourceID].active)
   {
     m_logger->warn("unable to update item {} on inactive source {}", item.GetPath(),
-                   import.GetSource().GetIdentifier());
+                   import.GetSource());
     return false;
   }
 
   CMediaImportTaskProcessorJob* processorJob =
       CMediaImportTaskProcessorJob::UpdateImportedItemOnSource(import, item, this, this);
-  AddJob(import.GetSource().GetIdentifier(), processorJob);
+  AddJob(sourceID, processorJob);
 
-  m_logger->info("import update task for {} on {} started", item.GetPath(), import);
+  m_logger->info("import update task for {} from {} started", item.GetPath(), import);
 
   return true;
 }
@@ -1847,7 +1778,7 @@ std::vector<CFileItemPtr> CMediaImportManager::GetImportedItemsByImport(
 {
   // make sure the import is known
   CMediaImport tmpImport;
-  if (!FindImport(import.GetPath(), import.GetMediaTypes(), tmpImport))
+  if (!FindImport(import.GetSource().GetIdentifier(), import.GetMediaTypes(), tmpImport))
     return {};
 
   std::map<MediaType, MediaImportHandlerPtr> importHandlers;
@@ -2359,7 +2290,6 @@ void CMediaImportManager::SendImportMessage(const CMediaImport& import, int mess
 {
   CFileItemPtr importItem(new CFileItem());
   importItem->SetProperty("Source.ID", import.GetSource().GetIdentifier());
-  importItem->SetProperty("Import.Path", import.GetPath());
   importItem->SetProperty("Import.MediaTypes", CMediaTypes::Join(import.GetMediaTypes()));
 
   CGUIMessage msg(GUI_MSG_NOTIFY_ALL, 0, 0, message, 0, importItem);

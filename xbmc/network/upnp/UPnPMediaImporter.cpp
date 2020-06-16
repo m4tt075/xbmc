@@ -175,12 +175,12 @@ bool CUPnPMediaImporter::CanImport(const std::string& path)
 
 bool CUPnPMediaImporter::IsSourceReady(CMediaImportSource& source)
 {
-  return CanImport(source.GetBasePath());
+  return CanImport(source.GetIdentifier());
 }
 
 bool CUPnPMediaImporter::IsImportReady(CMediaImport& import)
 {
-  return CanImport(import.GetPath());
+  return CanImport(import.GetSource().GetIdentifier());
 }
 
 bool CUPnPMediaImporter::CanUpdatePlaycountOnSource(const std::string& path)
@@ -207,11 +207,12 @@ bool CUPnPMediaImporter::Import(CMediaImportImportItemsRetrievalTask* task)
     return false;
 
   const auto& import = task->GetImport();
+  const auto& sourceId = import.GetSource().GetIdentifier();
 
   std::string deviceUUID;
-  if (!getDeviceIdentifier(import.GetPath(), deviceUUID))
+  if (!getDeviceIdentifier(sourceId, deviceUUID))
   {
-    m_logger->warn("unable to import media items from unknown path {}", import.GetPath());
+    m_logger->warn("unable to import media items from unknown source {}", import.GetSource());
     return false;
   }
 
@@ -249,7 +250,7 @@ bool CUPnPMediaImporter::Import(CMediaImportImportItemsRetrievalTask* task)
     std::vector<CFileItemPtr> itemList;
     for (auto& item : items)
     {
-      if (URIUtils::PathHasParent(item->GetPath(), import.GetPath()))
+      if (URIUtils::PathHasParent(item->GetPath(), sourceId))
         itemList.push_back(item);
     }
 
@@ -264,9 +265,10 @@ bool CUPnPMediaImporter::UpdateOnSource(CMediaImportUpdateTask* task)
     return false;
 
   const auto& import = task->GetImport();
+  const auto& sourceId = import.GetSource().GetIdentifier();
 
   std::string deviceUUID;
-  if (!getDeviceIdentifier(import.GetPath(), deviceUUID))
+  if (!getDeviceIdentifier(sourceId, deviceUUID))
   {
     m_logger->warn("unable to update imported media item on unknown source {}", import.GetSource());
     return false;
@@ -283,9 +285,8 @@ bool CUPnPMediaImporter::UpdateOnSource(CMediaImportUpdateTask* task)
   if (!importSettings->UpdatePlaybackMetadataOnSource())
     return false;
 
-  const std::string& importPath = import.GetPath();
-  if (!CanUpdatePlaycountOnSource(importPath) && !CanUpdateLastPlayedOnSource(importPath) &&
-      !CanUpdateResumePositionOnSource(importPath))
+  if (!CanUpdatePlaycountOnSource(sourceId) && !CanUpdateLastPlayedOnSource(sourceId) &&
+      !CanUpdateResumePositionOnSource(sourceId))
     return false;
 
   const CFileItem& item = task->GetItem();
