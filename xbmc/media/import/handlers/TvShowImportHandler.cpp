@@ -12,6 +12,7 @@
 #include "media/import/MediaImport.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
+#include "utils/log.h"
 #include "video/VideoDatabase.h"
 
 #include <algorithm>
@@ -57,7 +58,7 @@ bool CTvShowImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
   // we don't know the season art yet
   std::map<int, std::map<std::string, std::string>> seasonArt;
 
-  const CVideoInfoTag* info = item->GetVideoInfoTag();
+  auto info = item->GetVideoInfoTag();
 
   // check if there already is a local tvshow with the same name
   CFileItemList tvshows;
@@ -113,19 +114,22 @@ bool CTvShowImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
 
     // simply add the path of the imported tvshow to the tvshow's paths
     if (exists && tvshow != nullptr)
-      item->GetVideoInfoTag()->m_iDbId =
+      info->m_iDbId =
           m_db.SetDetailsForTvShow(tvshowPaths, *(tvshow->GetVideoInfoTag()), tvshow->GetArt(),
                                    seasonArt, tvshow->GetVideoInfoTag()->m_iDbId);
   }
 
   // couldn't find a matching local tvshow so add the newly imported one
   if (!exists)
-    item->GetVideoInfoTag()->m_iDbId = m_db.SetDetailsForTvShow(
-        tvshowPaths, *(item->GetVideoInfoTag()), item->GetArt(), seasonArt);
+    info->m_iDbId = m_db.SetDetailsForTvShow(tvshowPaths, *info, item->GetArt(), seasonArt);
 
   // make sure that the tvshow was properly added
-  if (item->GetVideoInfoTag()->m_iDbId <= 0)
+  if (info->m_iDbId <= 0)
+  {
+    GetLogger()->error("failed to set details for added tvshow \"{}\" imported from {}",
+                       info->m_strTitle, import.GetPath());
     return false;
+  }
 
   return SetImportForItem(item, import);
 }
@@ -135,11 +139,20 @@ bool CTvShowImportHandler::UpdateImportedItem(const CMediaImport& import, CFileI
   if (item == nullptr || !item->HasVideoInfoTag() || item->GetVideoInfoTag()->m_iDbId <= 0)
     return false;
 
+  const auto tvshow = item->GetVideoInfoTag();
+
   std::vector<std::pair<std::string, std::string>> tvshowPaths;
-  tvshowPaths.push_back(std::make_pair(item->GetPath(), item->GetVideoInfoTag()->m_basePath));
+  tvshowPaths.push_back(std::make_pair(item->GetPath(), tvshow->m_basePath));
   std::map<int, std::map<std::string, std::string>> seasonArt;
-  return m_db.SetDetailsForTvShow(tvshowPaths, *(item->GetVideoInfoTag()), item->GetArt(),
-                                  seasonArt, item->GetVideoInfoTag()->m_iDbId) > 0;
+  if (m_db.SetDetailsForTvShow(tvshowPaths, *tvshow, item->GetArt(), seasonArt, tvshow->m_iDbId) <=
+      0)
+  {
+    GetLogger()->error("failed to set details for tvshow \"{}\" imported from {}", tvshow->m_strTitle,
+                       import.GetPath());
+    return false;
+  }
+
+  return true;
 }
 
 bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const CFileItem* item)
@@ -147,14 +160,24 @@ bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const 
   if (item == nullptr || !item->HasVideoInfoTag() || item->GetVideoInfoTag()->m_iDbId <= 0)
     return false;
 
+  const auto tvshow = item->GetVideoInfoTag();
+
   // get all paths belonging to the tvshow
   std::map<int, std::string> tvshowPaths;
-  if (!m_db.GetPathsForTvShow(item->GetVideoInfoTag()->m_iDbId, tvshowPaths))
+  if (!m_db.GetPathsForTvShow(tvshow->m_iDbId, tvshowPaths))
+  {
+    GetLogger()->error("failed to get paths for tvshow \"{}\" imported from {}", tvshow->m_strTitle,
+                       import.GetPath());
     return false;
+  }
 
   // something is wrong as the tvshow doesn't have any paths
   if (tvshowPaths.empty())
+  {
+    GetLogger()->warn("tvshow \"{}\" imported from {} doesn't have any paths", tvshow->m_strTitle,
+                      import.GetPath());
     return false;
+  }
 
   // we only handle the case where more than one path belongs to the tvshow because
   // we can't delete the tvshow completely before not having synced the episodes
@@ -163,12 +186,13 @@ bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const 
 
   for (const auto& tvshowPath : tvshowPaths)
   {
+    // TODO(Montellese): THIS DOESN'T WORK!!!
     // check if the tvshow path is a sub-path of the media import
     if (URIUtils::PathHasParent(tvshowPath.second, import.GetPath().c_str()))
     {
       // remove the path from the tvshow
-      m_db.RemovePathFromTvShow(item->GetVideoInfoTag()->m_iDbId, tvshowPath.first);
-      m_db.RemoveImportFromItem(item->GetVideoInfoTag()->m_iDbId, GetMediaType(), import);
+      m_db.RemovePathFromTvShow(tvshow->m_iDbId, tvshowPath.first);
+      m_db.RemoveImportFromItem(tvshow->m_iDbId, GetMediaType(), import);
       break;
     }
   }
@@ -192,31 +216,31 @@ bool CTvShowImportHandler::CleanupImportedItems(const CMediaImport& import)
     if (!importedTvShow->HasVideoInfoTag() || importedTvShow->GetVideoInfoTag()->m_iDbId <= 0)
       continue;
 
+    const auto tvshow = importedTvShow->GetVideoInfoTag();
+
     // get all episodes of the tvshow
     CVideoDbUrl videoUrl;
-    if (!videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/-1/",
-                                                 importedTvShow->GetVideoInfoTag()->m_iDbId)))
+    if (!videoUrl.FromString(
+            StringUtils::Format("videodb://tvshows/titles/{}/-1/?imported", tvshow->m_iDbId)))
+    {
+      GetLogger()->warn("failed to prepare videodb:// URL for all episodes of \"{}\" imported from {}",
+                        tvshow->m_strShowTitle, import.GetPath());
       continue;
-    videoUrl.AddOption("tvshowid", importedTvShow->GetVideoInfoTag()->m_iDbId);
+    }
+    videoUrl.AddOption("tvshowid", tvshow->m_iDbId);
+    videoUrl.AddOption("import", import.GetPath());
 
     CFileItemList episodes;
     if (!m_db.GetEpisodesByWhere(videoUrl.ToString(), CDatabase::Filter(), episodes, true,
                                  SortDescription(), false))
-      continue;
-
-    // loop through all episodes and count the imported ones
-    bool hasImportedEpisodes = false;
-    for (int i = 0; i < episodes.Size(); ++i)
     {
-      if (episodes.Get(i)->IsImported())
-      {
-        hasImportedEpisodes = true;
-        break;
-      }
+      GetLogger()->warn("failed to get episodes for \"{}\" imported from {}", tvshow->m_strShowTitle,
+                        import.GetPath());
+      continue;
     }
 
     // if there are no imported episodes we can remove the tvshow
-    if (!hasImportedEpisodes)
+    if (episodes.IsEmpty())
       RemoveImportedItem(m_db, import, importedTvShow.get());
   }
 
@@ -234,7 +258,10 @@ bool CTvShowImportHandler::GetLocalItems(CVideoDatabase& videodb,
           "videodb://tvshows/titles/?imported&import=" + CURL::Encode(import.GetPath()),
           CDatabase::Filter(), tvshows, SortDescription(),
           import.Settings()->UpdateImportedMediaItems() ? VideoDbDetailsAll : VideoDbDetailsNone))
+  {
+    GetLogger()->error("failed to get previously imported tvshows from {}", import.GetPath());
     return false;
+  }
 
   items.insert(items.begin(), tvshows.cbegin(), tvshows.cend());
 
@@ -277,7 +304,8 @@ void CTvShowImportHandler::RemoveImportedItem(CVideoDatabase& videodb,
   if (item == nullptr || !item->HasVideoInfoTag())
     return;
 
-  // if there are other episodes only remove the path and the import link to the tvshow and not the whole tvshow
+  // if there are other episodes only remove the path and the import link to the tvshow and not the
+  // whole tvshow
   if (item->GetVideoInfoTag()->m_iEpisode > 0)
   {
     videodb.RemovePathFromTvShow(item->GetVideoInfoTag()->m_iDbId,

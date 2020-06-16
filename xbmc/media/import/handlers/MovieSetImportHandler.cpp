@@ -10,6 +10,7 @@
 
 #include "FileItem.h"
 #include "media/import/MediaImport.h"
+#include "utils/log.h"
 #include "video/VideoDatabase.h"
 
 CFileItemPtr CMovieSetImportHandler::FindMatchingLocalItem(
@@ -41,7 +42,11 @@ bool CMovieSetImportHandler::AddImportedItem(const CMediaImport& import, CFileIt
   item->GetVideoInfoTag()->m_iDbId =
       m_db.SetDetailsForMovieSet(*(item->GetVideoInfoTag()), item->GetArt());
   if (item->GetVideoInfoTag()->m_iDbId <= 0)
+  {
+    GetLogger()->error("failed to set details for added movie set \"{}\" imported from {}",
+                       item->GetLabel(), import.GetPath());
     return false;
+  }
 
   return SetImportForItem(item, import);
 }
@@ -53,7 +58,11 @@ bool CMovieSetImportHandler::UpdateImportedItem(const CMediaImport& import, CFil
 
   if (m_db.SetDetailsForMovieSet(*(item->GetVideoInfoTag()), item->GetArt(),
                                  item->GetVideoInfoTag()->m_iDbId) <= 0)
+  {
+    GetLogger()->error("failed to set details for movie set \"{}\" imported from {}",
+                       item->GetLabel(), import.GetPath());
     return false;
+  }
 
   return true;
 }
@@ -76,7 +85,10 @@ bool CMovieSetImportHandler::GetLocalItems(CVideoDatabase& videodb,
   if (!videodb.GetSetsByWhere("videodb://movies/sets/?imported&import=" +
                                   CURL::Encode(import.GetPath()),
                               CDatabase::Filter(), movieSets, false))
+  {
+    GetLogger()->error("failed to get previously imported movie sets from {}", import.GetPath());
     return false;
+  }
 
   items.insert(items.begin(), movieSets.cbegin(), movieSets.cend());
 
