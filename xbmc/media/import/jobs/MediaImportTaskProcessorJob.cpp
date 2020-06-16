@@ -148,8 +148,7 @@ CMediaImportTaskProcessorJob* CMediaImportTaskProcessorJob::ChangeImportedItems(
 
   auto processorJob = new CMediaImportTaskProcessorJob(import.GetSource().GetIdentifier(), nullptr,
                                                        importHandlerManager, callback, false);
-  processorJob->m_importTaskData.emplace(std::make_pair(import.GetPath(), import.GetMediaTypes()),
-                                         importTaskData);
+  processorJob->m_importTaskData.emplace(import.GetMediaTypes(), importTaskData);
 
   // get all local items
   processorJob->m_taskTypesToBeProcessed.push_back(MediaImportTaskType::LocalItemsRetrieval);
@@ -656,8 +655,7 @@ bool CMediaImportTaskProcessorJob::AddImport(const CMediaImport& import,
   }
 
   // check if an import with that path and media type already exists
-  const auto& itImportTaskData =
-      m_importTaskData.find(std::make_pair(import.GetPath(), import.GetMediaTypes()));
+  const auto& itImportTaskData = m_importTaskData.find(import.GetMediaTypes());
   if (itImportTaskData != m_importTaskData.end())
     return false;
 
@@ -675,8 +673,7 @@ bool CMediaImportTaskProcessorJob::AddImport(const CMediaImport& import,
     importTaskData.m_mediaTypeData.push_back(mediaTypeData);
   }
 
-  m_importTaskData.emplace(std::make_pair(import.GetPath(), import.GetMediaTypes()),
-                           importTaskData);
+  m_importTaskData.emplace(import.GetMediaTypes(), importTaskData);
 
   // determine the tasks (and their order) to process
   if (tasksToBeProcessed.empty())

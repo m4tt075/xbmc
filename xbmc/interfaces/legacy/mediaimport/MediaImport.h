@@ -63,35 +63,9 @@ public:
                        CAddonMediaImporter* addonMediaImporter = nullptr);
 #endif
 
-  MediaImport(const String& importPath);
+  MediaImport();
 
   virtual ~MediaImport() {}
-
-#ifdef DOXYGEN_SHOULD_USE_THIS
-  ///
-  /// \ingroup python_xbmcmediaimport_mediapimport
-  /// @brief \python_func{ getPath() }
-  ///-----------------------------------------------------------------------
-  /// Returns the media import's path.
-  ///
-  /// @return  Path of the media import
-  ///
-  ///
-  ///-----------------------------------------------------------------------
-  /// @python_v19
-  ///
-  /// **Example:**
-  /// ~~~~~~~~~~~~~{.py}
-  /// ...
-  /// # getPath()
-  /// importPath = mediaImport.getPath()
-  /// ...
-  /// ~~~~~~~~~~~~~
-  ///
-  getPath();
-#else
-  String getPath() const;
-#endif
 
 #ifdef DOXYGEN_SHOULD_USE_THIS
   ///

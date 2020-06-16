@@ -97,7 +97,6 @@ enum VideoDbDetails
 #define VIDEODB_DETAILS_MOVIE_UNIQUEID_TYPE     VIDEODB_MAX_COLUMNS + 19
 #define VIDEODB_DETAILS_MOVIE_SOURCE            VIDEODB_MAX_COLUMNS + 20
 #define VIDEODB_DETAILS_MOVIE_ENABLED           VIDEODB_MAX_COLUMNS + 21
-#define VIDEODB_DETAILS_MOVIE_IMPORTPATH        VIDEODB_MAX_COLUMNS + 22
 
 #define VIDEODB_DETAILS_EPISODE_TVSHOW_ID       VIDEODB_MAX_COLUMNS + 2
 #define VIDEODB_DETAILS_EPISODE_USER_RATING     VIDEODB_MAX_COLUMNS + 3
@@ -122,7 +121,6 @@ enum VideoDbDetails
 #define VIDEODB_DETAILS_EPISODE_UNIQUEID_TYPE   VIDEODB_MAX_COLUMNS + 22
 #define VIDEODB_DETAILS_EPISODE_SOURCE          VIDEODB_MAX_COLUMNS + 23
 #define VIDEODB_DETAILS_EPISODE_ENABLED         VIDEODB_MAX_COLUMNS + 24
-#define VIDEODB_DETAILS_EPISODE_IMPORTPATH      VIDEODB_MAX_COLUMNS + 25
 
 #define VIDEODB_DETAILS_TVSHOW_USER_RATING      VIDEODB_MAX_COLUMNS + 1
 #define VIDEODB_DETAILS_TVSHOW_DURATION         VIDEODB_MAX_COLUMNS + 2
@@ -140,7 +138,6 @@ enum VideoDbDetails
 #define VIDEODB_DETAILS_TVSHOW_UNIQUEID_TYPE    VIDEODB_MAX_COLUMNS + 14
 #define VIDEODB_DETAILS_TVSHOW_SOURCE           VIDEODB_MAX_COLUMNS + 15
 #define VIDEODB_DETAILS_TVSHOW_ENABLED          VIDEODB_MAX_COLUMNS + 16
-#define VIDEODB_DETAILS_TVSHOW_IMPORTPATH       VIDEODB_MAX_COLUMNS + 17
 
 #define VIDEODB_DETAILS_MUSICVIDEO_USER_RATING  VIDEODB_MAX_COLUMNS + 2
 #define VIDEODB_DETAILS_MUSICVIDEO_PREMIERED    VIDEODB_MAX_COLUMNS + 3
@@ -156,7 +153,6 @@ enum VideoDbDetails
 #define VIDEODB_DETAILS_MUSICVIDEO_UNIQUEID_TYPE VIDEODB_MAX_COLUMNS + 13
 #define VIDEODB_DETAILS_MUSICVIDEO_SOURCE       VIDEODB_MAX_COLUMNS + 14
 #define VIDEODB_DETAILS_MUSICVIDEO_ENABLED      VIDEODB_MAX_COLUMNS + 15
-#define VIDEODB_DETAILS_MUSICVIDEO_IMPORTPATH   VIDEODB_MAX_COLUMNS + 16
 
 #define VIDEODB_TYPE_UNUSED 0
 #define VIDEODB_TYPE_STRING 1
@@ -308,7 +304,6 @@ typedef enum // this enum MUST match the offset struct further down!! and make s
 
 #define VIDEODB_DETAILS_SEASON_SOURCE           VIDEODB_ID_SEASON_MAX + 0
 #define VIDEODB_DETAILS_SEASON_ENABLED          VIDEODB_ID_SEASON_MAX + 1
-#define VIDEODB_DETAILS_SEASON_IMPORTPATH       VIDEODB_ID_SEASON_MAX + 2
 
 typedef enum // this enum MUST match the offset struct further down!! and make sure to keep min and max at -1 and sizeof(offsets)
 {
@@ -1036,14 +1031,13 @@ protected:
   int GetSourceId(const std::string& sourceIdentifier);
 
   /*! \brief Get the id of an import from its path
-   \param path path of the import
+   \param sourceIdentifier source identifier
    \param mediaTypes media types of the import
-   \param sourceIdentifier optional source identifier
    \return id of the import, -1 if it is not in the db.
    */
-  int GetImportId(const std::string& path, const GroupedMediaTypes& mediaTypes, const std::string &sourceIdentifier = "");
+  int GetImportId(const std::string& sourceIdentifier, const GroupedMediaTypes& mediaTypes);
   int GetImportId(const CMediaImport& import);
-  int GetImportId(int idPath, const GroupedMediaTypes& mediaTypes, int idSource = -1);
+  int GetImportId(int idSource, const GroupedMediaTypes& mediaTypes);
 
   int AddToTable(const std::string& table, const std::string& firstField, const std::string& secondField, const std::string& value);
   int UpdateRatings(int mediaId, const char *mediaType, const RatingMap& values, const std::string& defaultRating);

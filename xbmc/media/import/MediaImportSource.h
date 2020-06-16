@@ -24,7 +24,6 @@ class CMediaImportSource
 {
 public:
   explicit CMediaImportSource(const std::string& identifier = "",
-                              const std::string& basePath = "",
                               const std::string& friendlyName = "",
                               const std::string& iconUrl = "",
                               const MediaTypes& availableMediaTypes = MediaTypes(),
@@ -41,11 +40,10 @@ public:
 
   CMediaImportSource Clone() const;
 
+  bool IsValid() const { return !GetIdentifier().empty(); }
+
   const std::string& GetIdentifier() const { return m_identifier; }
   void SetIdentifier(const std::string& identifier) { m_identifier = identifier; }
-
-  const std::string& GetBasePath() const { return m_basePath; }
-  void SetBasePath(const std::string& basePath) { m_basePath = basePath; }
 
   const std::string& GetFriendlyName() const { return m_friendlyName; }
   void SetFriendlyName(const std::string& friendlyName) { m_friendlyName = friendlyName; }
@@ -82,7 +80,6 @@ public:
 
 private:
   std::string m_identifier;
-  std::string m_basePath;
   std::string m_friendlyName;
   std::string m_iconUrl;
   MediaTypes m_availableMediaTypes;

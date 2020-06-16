@@ -135,15 +135,15 @@ std::string CGUIWindowMediaSourceBrowser::ShowAndGetMediaSourcesToImportFrom(
 }
 
 GroupedMediaTypes CGUIWindowMediaSourceBrowser::ShowAndGetMediaTypesToImport(
-    const std::string& sourceID)
+    const std::string& sourceId)
 {
   GroupedMediaTypes mediaTypesToImport;
 
-  if (sourceID.empty())
+  if (sourceId.empty())
     return mediaTypesToImport;
 
-  CMediaImportSource source(sourceID);
-  if (!CServiceBroker::GetMediaImportManager().GetSource(sourceID, source))
+  CMediaImportSource source(sourceId);
+  if (!CServiceBroker::GetMediaImportManager().GetSource(sourceId, source))
     return mediaTypesToImport;
 
   return ShowAndGetMediaTypesToImport(source);
@@ -249,7 +249,7 @@ bool CGUIWindowMediaSourceBrowser::OnMessage(CGUIMessage& message)
           if (item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).empty())
             return false;
 
-          if (item->GetProperty(PROPERTY_IMPORT_PATH).empty())
+          if (item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).empty())
           {
             if (actionId == ACTION_SHOW_INFO)
               return OnSourceInfo(item);
@@ -305,7 +305,7 @@ bool CGUIWindowMediaSourceBrowser::OnMessage(CGUIMessage& message)
         case GUI_MSG_IMPORT_ADDED:
         {
           OnImportAdded(
-              item->GetProperty(PROPERTY_IMPORT_PATH).asString(),
+              item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString(),
               CMediaTypes::Split(item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).asString()));
           return true;
         }
@@ -313,7 +313,7 @@ bool CGUIWindowMediaSourceBrowser::OnMessage(CGUIMessage& message)
         case GUI_MSG_IMPORT_UPDATED:
         {
           OnImportUpdated(
-              item->GetProperty(PROPERTY_IMPORT_PATH).asString(),
+              item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString(),
               CMediaTypes::Split(item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).asString()));
           return true;
         }
@@ -321,7 +321,7 @@ bool CGUIWindowMediaSourceBrowser::OnMessage(CGUIMessage& message)
         case GUI_MSG_IMPORT_REMOVED:
         {
           OnImportRemoved(
-              item->GetProperty(PROPERTY_IMPORT_PATH).asString(),
+              item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString(),
               CMediaTypes::Split(item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).asString()));
           return true;
         }
@@ -415,7 +415,7 @@ bool CGUIWindowMediaSourceBrowser::OnImportSynchronise(const CFileItemPtr& item)
     return false;
 
   if (CServiceBroker::GetMediaImportManager().Import(
-          item->GetProperty(PROPERTY_IMPORT_PATH).asString(),
+          item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString(),
           CMediaTypes::Split(item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).asString())))
     return true;
 
@@ -452,8 +452,7 @@ bool CGUIWindowMediaSourceBrowser::OnImportDelete(const CFileItemPtr& item)
   if (pDialog == nullptr)
     return false;
 
-  std::string sourceID = item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString();
-  std::string importPath = item->GetProperty(PROPERTY_IMPORT_PATH).asString();
+  std::string sourceId = item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString();
   GroupedMediaTypes mediaTypes =
       CMediaTypes::Split(item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).asString());
 
@@ -465,7 +464,7 @@ bool CGUIWindowMediaSourceBrowser::OnImportDelete(const CFileItemPtr& item)
   if (!pDialog->IsConfirmed())
     return false;
 
-  CServiceBroker::GetMediaImportManager().RemoveImport(importPath, mediaTypes);
+  CServiceBroker::GetMediaImportManager().RemoveImport(sourceId, mediaTypes);
   return true;
 }
 
@@ -507,32 +506,32 @@ void CGUIWindowMediaSourceBrowser::OnSourceRemoved(const std::string& sourceId)
   }
 }
 
-void CGUIWindowMediaSourceBrowser::OnImportAdded(const std::string& importPath,
+void CGUIWindowMediaSourceBrowser::OnImportAdded(const std::string& sourceId,
                                                  const GroupedMediaTypes& mediaTypes)
 {
   if (m_vecItems->GetContent() == "imports")
     RefreshList(true);
 }
 
-void CGUIWindowMediaSourceBrowser::OnImportUpdated(const std::string& importPath,
+void CGUIWindowMediaSourceBrowser::OnImportUpdated(const std::string& sourceId,
                                                    const GroupedMediaTypes& mediaTypes)
 {
   if (m_vecItems->GetContent() == "imports")
   {
     // only refresh the list if the updated import is part of it
-    CFileItemPtr item = GetImportItem(importPath, mediaTypes);
+    CFileItemPtr item = GetImportItem(sourceId, mediaTypes);
     if (item != nullptr)
       RefreshList(true);
   }
 }
 
-void CGUIWindowMediaSourceBrowser::OnImportRemoved(const std::string& importPath,
+void CGUIWindowMediaSourceBrowser::OnImportRemoved(const std::string& sourceId,
                                                    const GroupedMediaTypes& mediaTypes)
 {
   if (m_vecItems->GetContent() == "imports")
   {
     // only refresh the list if the removed import is part of it
-    CFileItemPtr item = GetImportItem(importPath, mediaTypes);
+    CFileItemPtr item = GetImportItem(sourceId, mediaTypes);
     if (item != nullptr)
     {
       int selectedItemIndex = m_viewControl.GetSelectedItem();
@@ -580,7 +579,7 @@ void CGUIWindowMediaSourceBrowser::OnSourceIsActiveChanged(const std::string& so
   }
 }
 
-CFileItemPtr CGUIWindowMediaSourceBrowser::GetImportItem(const std::string& importPath,
+CFileItemPtr CGUIWindowMediaSourceBrowser::GetImportItem(const std::string& sourceId,
                                                          const GroupedMediaTypes& mediaTypes) const
 {
   for (int index = 0; index < m_vecItems->Size(); index++)
@@ -589,7 +588,7 @@ CFileItemPtr CGUIWindowMediaSourceBrowser::GetImportItem(const std::string& impo
     if (item->IsParentFolder())
       continue;
 
-    if (item->GetProperty(PROPERTY_IMPORT_PATH).asString() == importPath &&
+    if (item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString() == sourceId &&
         CMediaTypes::Split(item->GetProperty(PROPERTY_IMPORT_MEDIATYPES).asString()) == mediaTypes)
       return item;
   }
@@ -626,23 +625,23 @@ bool CGUIWindowMediaSourceBrowser::GetDirectory(const std::string& strDirectory,
     std::string addImportPath = "newimport://";
     std::string sourceDir = strDirectory;
     URIUtils::RemoveSlashAtEnd(sourceDir);
-    std::string sourceID;
+    std::string sourceId;
     if (url.GetHostName() == "all" || url.GetHostName() == "active")
-      sourceID = url.GetFileName();
+      sourceId = url.GetFileName();
     else if (url.GetHostName() != "inactive")
-      sourceID = url.GetHostName();
-    URIUtils::RemoveSlashAtEnd(sourceID);
-    sourceID = CURL::Decode(sourceID);
+      sourceId = url.GetHostName();
+    URIUtils::RemoveSlashAtEnd(sourceId);
+    sourceId = CURL::Decode(sourceId);
 
-    addImportPath += CURL::Encode(sourceID);
-    CMediaImportSource source(sourceID);
-    if (CServiceBroker::GetMediaImportManager().GetSource(sourceID, source) && source.IsActive() &&
+    addImportPath += CURL::Encode(sourceId);
+    CMediaImportSource source(sourceId);
+    if (CServiceBroker::GetMediaImportManager().GetSource(sourceId, source) && source.IsActive() &&
         CServiceBroker::GetMediaImportManager().IsSourceReady(source))
     {
       // count the number of media types already being imported for a source
       size_t importedMediaTypesCount = 0;
       for (const auto& import :
-           CServiceBroker::GetMediaImportManager().GetImportsBySource(sourceID))
+           CServiceBroker::GetMediaImportManager().GetImportsBySource(sourceId))
         importedMediaTypesCount += import.GetMediaTypes().size();
 
       // check if all media types are already being imported or not
@@ -697,14 +696,10 @@ void CGUIWindowMediaSourceBrowser::GetContextButtons(int itemNumber, CContextBut
 {
   CFileItemPtr item = m_vecItems->Get(itemNumber);
   const std::string sourceId = item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).asString();
-  bool isSource = !sourceId.empty() && !item->HasProperty(PROPERTY_IMPORT_PATH);
-  bool isImport = !sourceId.empty() && item->HasProperty(PROPERTY_IMPORT_PATH) &&
-                  item->HasProperty(PROPERTY_IMPORT_MEDIATYPES);
+  bool isSource = !sourceId.empty() && !item->HasProperty(PROPERTY_IMPORT_MEDIATYPES);
+  bool isImport = !isSource;
   bool isActive = item->GetProperty(PROPERTY_SOURCE_ISACTIVE).asBoolean();
   bool isReady = item->GetProperty(PROPERTY_SOURCE_ISREADY).asBoolean();
-
-  if (!isSource && !isImport)
-    return;
 
   if (isActive)
   {
@@ -725,7 +720,7 @@ bool CGUIWindowMediaSourceBrowser::OnContextButton(int itemNumber, CONTEXT_BUTTO
 {
   CFileItemPtr item = m_vecItems->Get(itemNumber);
   bool isSource = !item->GetProperty(PROPERTY_SOURCE_IDENTIFIER).empty() &&
-                  !item->HasProperty(PROPERTY_IMPORT_PATH);
+                  !item->HasProperty(PROPERTY_IMPORT_MEDIATYPES);
 
   switch (button)
   {
@@ -780,8 +775,7 @@ bool CGUIWindowMediaSourceBrowser::OnClick(int iItem, const std::string& player 
   if (!item->m_bIsFolder)
   {
     // if the item is a media import show the info dialog
-    if (!sourceId.empty() && item->HasProperty(PROPERTY_IMPORT_PATH) &&
-        item->HasProperty(PROPERTY_IMPORT_MEDIATYPES))
+    if (!sourceId.empty() && item->HasProperty(PROPERTY_IMPORT_MEDIATYPES))
       return OnImportInfo(item);
   }
   else if (!sourceId.empty())
@@ -798,19 +792,19 @@ bool CGUIWindowMediaSourceBrowser::OnClick(int iItem, const std::string& player 
 
 bool CGUIWindowMediaSourceBrowser::AddNewImport(CFileItemPtr newImportItem, const CURL& url)
 {
-  std::string sourceID = CURL::Decode(url.GetHostName());
-  if (sourceID.empty())
+  std::string sourceId = CURL::Decode(url.GetHostName());
+  if (sourceId.empty())
     return false;
 
   // ask the user what media type to add as an import
-  GroupedMediaTypes mediaTypesToImport = ShowAndGetMediaTypesToImport(sourceID);
+  GroupedMediaTypes mediaTypesToImport = ShowAndGetMediaTypesToImport(sourceId);
   if (mediaTypesToImport.empty())
     return true;
 
   auto& mediaImportManager = CServiceBroker::GetMediaImportManager();
 
   // add the new import (they aren't automatically synchronised)
-  if (!mediaImportManager.AddRecursiveImport(sourceID, sourceID, mediaTypesToImport))
+  if (!mediaImportManager.AddImport(sourceId, mediaTypesToImport))
   {
     KODI::MESSAGING::HELPERS::ShowOKDialogText(39608, g_localizeStrings.Get(39609));
     return false;
@@ -818,7 +812,7 @@ bool CGUIWindowMediaSourceBrowser::AddNewImport(CFileItemPtr newImportItem, cons
 
   // show the info dialog for the new import
   CMediaImport import;
-  if (mediaImportManager.GetImport(sourceID, mediaTypesToImport, import))
+  if (mediaImportManager.GetImport(sourceId, mediaTypesToImport, import))
   {
     CFileItemPtr importItem =
         XFILE::CMediaImportDirectory::FileItemFromMediaImport(import, m_vecItems->GetPath());
@@ -840,7 +834,7 @@ bool CGUIWindowMediaSourceBrowser::AddNewImport(CFileItemPtr newImportItem, cons
   }
 
   // now try to synchronise the newly added import
-  mediaImportManager.Import(sourceID, mediaTypesToImport);
+  mediaImportManager.Import(sourceId, mediaTypesToImport);
 
   return true;
 }
@@ -883,8 +877,7 @@ bool CGUIWindowMediaSourceBrowser::AddNewSource(CFileItemPtr newImportItem, cons
   CMediaImportSource existingSource;
   if (mediaImportManager.GetSource(discoveredSource.GetIdentifier(), existingSource))
   {
-    m_logger->info("source {} at \"{}\" already exists", discoveredSource,
-                   discoveredSource.GetBasePath());
+    m_logger->info("source {} already exists", discoveredSource);
     KODI::MESSAGING::HELPERS::ShowOKDialogText(
         CVariant{(*selectedImporter)->GetSourceLookupProtocol()},
         CVariant{
@@ -895,8 +888,7 @@ bool CGUIWindowMediaSourceBrowser::AddNewSource(CFileItemPtr newImportItem, cons
   bool result = mediaImportManager.AddAndActivateSourceManually(discoveredSource);
   if (!result)
   {
-    m_logger->error("failed to add discovered source {} at \"{}\"", discoveredSource,
-                    discoveredSource.GetBasePath());
+    m_logger->error("failed to add discovered source {}", discoveredSource);
     KODI::MESSAGING::HELPERS::ShowOKDialogText(
         CVariant{(*selectedImporter)->GetSourceLookupProtocol()},
         CVariant{g_localizeStrings.Get(39618)});

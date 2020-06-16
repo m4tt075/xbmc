@@ -54,14 +54,12 @@ MediaProvider::MediaProvider(const CMediaImportSource& source,
 #endif
 
 MediaProvider::MediaProvider(const String& identifier,
-                             const String& basePath /* = emptyString */,
                              const String& friendlyName /* = emptyString */,
                              const String& iconUrl /* = emptyString */,
                              const MediaTypes& mediaTypes /* = {} */,
                              const String& lastSynced /* = emptyString */,
                              int handle /* = -1 */)
-  : source(std::make_shared<CMediaImportSource>(
-        identifier, basePath, friendlyName, iconUrl, mediaTypes)),
+  : source(std::make_shared<CMediaImportSource>(identifier, friendlyName, iconUrl, mediaTypes)),
     m_addonMediaImporter(nullptr)
 {
   if (languageHook != nullptr)
@@ -90,16 +88,6 @@ MediaProvider::MediaProvider(const String& identifier,
 String MediaProvider::getIdentifier() const
 {
   return source->GetIdentifier();
-}
-
-String MediaProvider::getBasePath() const
-{
-  return source->GetBasePath();
-}
-
-void MediaProvider::setBasePath(const String& basePath)
-{
-  source->SetBasePath(basePath);
 }
 
 String MediaProvider::getFriendlyName() const
