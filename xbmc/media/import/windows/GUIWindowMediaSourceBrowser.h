@@ -55,12 +55,12 @@ protected:
   void OnSourceAdded(const std::string& sourceId);
   void OnSourceUpdated(const std::string& sourceId);
   void OnSourceRemoved(const std::string& sourceId);
-  void OnImportAdded(const std::string& importPath, const GroupedMediaTypes& mediaTypes);
-  void OnImportUpdated(const std::string& importPath, const GroupedMediaTypes& mediaTypes);
-  void OnImportRemoved(const std::string& importPath, const GroupedMediaTypes& mediaTypes);
+  void OnImportAdded(const std::string& sourceId, const GroupedMediaTypes& mediaTypes);
+  void OnImportUpdated(const std::string& sourceId, const GroupedMediaTypes& mediaTypes);
+  void OnImportRemoved(const std::string& sourceId, const GroupedMediaTypes& mediaTypes);
   void OnSourceIsActiveChanged(const std::string& sourceId, bool isactive);
 
-  CFileItemPtr GetImportItem(const std::string& importPath,
+  CFileItemPtr GetImportItem(const std::string& sourceId,
                              const GroupedMediaTypes& mediaTypes) const;
   CFileItemPtr GetSourceItem(const std::string& sourceId) const;
 

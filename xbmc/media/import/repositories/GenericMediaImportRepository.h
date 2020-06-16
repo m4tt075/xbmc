@@ -26,9 +26,7 @@ public:
   std::vector<CMediaImport> GetImportsBySource(const std::string& sourceIdentifier) const override;
   std::vector<CMediaImport> GetImportsByMediaType(
       const GroupedMediaTypes& mediaTypes) const override;
-  std::vector<CMediaImport> GetImportsByPath(const std::string& path,
-                                             bool includeSubDirectories = false) const override;
-  bool GetImport(const std::string& path,
+  bool GetImport(const std::string& sourceIdentifier,
                  const GroupedMediaTypes& mediaTypes,
                  CMediaImport& import) const override;
 

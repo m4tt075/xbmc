@@ -67,35 +67,22 @@ using MediaImportSettingsConstPtr = std::shared_ptr<const CMediaImportSettings>;
 class CMediaImport
 {
 public:
-  explicit CMediaImport(const std::string& importPath = "");
-  CMediaImport(const std::string& importPath, const CMediaImportSource& source);
+  explicit CMediaImport(const GroupedMediaTypes& mediaTypes = {}, const std::string& sourceIdentifier = "");
+  CMediaImport(const GroupedMediaTypes& mediaTypes, const CMediaImportSource& source);
+  CMediaImport(const GroupedMediaTypes& mediaTypes,
+    const CMediaImportSource& source,
+    const CDateTime& lastSynced,
+    const std::string& settingValues);
   CMediaImport(const CMediaImport& other);
 
   ~CMediaImport() = default;
-
-  static CMediaImport CreateRecursive(const std::string& importPath,
-                                      const GroupedMediaTypes& importedMediaTypes,
-                                      const CMediaImportSource& source,
-                                      const CDateTime& lastSynced = CDateTime(),
-                                      const std::string& settingValues = "")
-  {
-    return CMediaImport(importPath, source, importedMediaTypes, true, lastSynced, settingValues);
-  }
-  static CMediaImport CreateSelective(const std::string& importPath,
-                                      const GroupedMediaTypes& importedMediaTypes,
-                                      const CMediaImportSource& source,
-                                      const CDateTime& lastSynced = CDateTime(),
-                                      const std::string& settingValues = "")
-  {
-    return CMediaImport(importPath, source, importedMediaTypes, false, lastSynced, settingValues);
-  }
 
   bool operator==(const CMediaImport& other) const;
   bool operator!=(const CMediaImport& other) const { return !(*this == other); }
 
   CMediaImport Clone() const;
 
-  const std::string& GetPath() const { return m_importPath; }
+  bool IsValid() const { return !m_mediaTypes.empty() && m_source.IsValid(); }
 
   CMediaImportSource& GetSource() { return m_source; }
   const CMediaImportSource& GetSource() const { return m_source; }
@@ -108,11 +95,9 @@ public:
   }
 
   const GroupedMediaTypes& GetMediaTypes() const { return m_mediaTypes; }
+  std::string GetMediaTypesAsString() const;
   void SetMediaTypes(const GroupedMediaTypes& mediaTypes) { m_mediaTypes = mediaTypes; }
   bool ContainsMediaType(const GroupedMediaTypes::value_type mediaType) const;
-
-  bool IsRecursive() const { return m_recursive; }
-  void SetRecursive(bool recursive) { m_recursive = recursive; }
 
   const CDateTime& GetLastSynced() const { return m_lastSynced; }
   void SetLastSynced(const CDateTime& lastSynced)
@@ -133,17 +118,8 @@ public:
   friend std::ostream& operator<<(std::ostream& os, const CMediaImport& import);
 
 private:
-  CMediaImport(const std::string& importPath,
-               const CMediaImportSource& source,
-               const GroupedMediaTypes& importedMediaTypes,
-               bool recursive,
-               const CDateTime& lastSynced,
-               const std::string& settingValues);
-
-  std::string m_importPath;
   GroupedMediaTypes m_mediaTypes;
   CMediaImportSource m_source;
-  bool m_recursive;
   CDateTime m_lastSynced;
   MediaImportSettingsPtr m_settings;
 };
