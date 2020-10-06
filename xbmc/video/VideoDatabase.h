@@ -867,8 +867,9 @@ public:
    \param idMedia Database ID of the item belonging to the given import
    \param mediaType Media type of the item
    \param import Import the given item belongs to
+   \param idPath Database ID of the path belonging to the media item (only for parent objects)
    */
-  bool SetImportForItem(int idMedia, const MediaType& mediaType, const CMediaImport& import);
+  bool SetImportForItem(int idMedia, const MediaType& mediaType, const CMediaImport& import, int idPath = -1);
 
   /*! \brief Remove the import from an item
    \param idMedia Database ID of the item belonging to the given import
@@ -882,17 +883,25 @@ public:
    */
   bool DeleteItemsFromImport(const CMediaImport& import);
   
-  /*! \brief Enable/Disable all import items from the given import path
+  /*! \brief Enable/Disable all import items
    \param enabled Whether to enable or disable the items
    */
   void SetImportItemsEnabled(bool enabled);
   
-  /*! \brief Enable/Disable all import items from the given import path
+  /*! \brief Enable/Disable all import items from the given import
    \param enabled Whether to enable or disable the items
    \param mediaType Media type of the items to enable/disable
    \param import Import from which all items are to be enabled/disabled
    */
   void SetImportItemsEnabled(bool enabled, const MediaType& mediaType, const CMediaImport& import);
+
+  /*! \brief Gets the path (including its database ID) of the media item from the given import
+   \param idMedia Database ID of the media item
+   \param mediaType Media type of the item
+   \param import Import the given item belonged to
+   \param path [out] Pair containing the retrieved path and its database ID
+   */
+  bool GetPathForImportedItem(int idMedia, const MediaType& mediaType, const CMediaImport& import, std::pair<int, std::string>& path);
 
   /*! \brief Updates the dateAdded field in the files table for the file
    with the given idFile and the given path based on the files modification date
