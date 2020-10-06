@@ -140,7 +140,7 @@ void CVideoDatabase::CreateTables()
 
   CLog::Log(LOGINFO, "create import table");
   m_pDS->exec("CREATE TABLE import ( import_id integer primary key, source_id integer NOT NULL, media_type text NOT NULL, last_sync text, settings text)");
-  m_pDS->exec("CREATE TABLE import_link ( import_id integer NOT NULL, media_id integer NOT NULL, media_type text NOT NULL, enabled bool NOT NULL DEFAULT 1)");
+  m_pDS->exec("CREATE TABLE import_link ( import_id integer NOT NULL, media_id integer NOT NULL, media_type text NOT NULL, enabled bool NOT NULL DEFAULT 1, path_id integer NULL)");
 
   CLog::Log(LOGINFO, "create tvshow table");
   columns = "CREATE TABLE tvshow ( idShow integer primary key";
@@ -6016,7 +6016,7 @@ void CVideoDatabase::UpdateTables(int iVersion)
                 "name text NOT NULL, media_types text NOT NULL, settings text, manually_added "
                 "bool, importer_id text NOT NULL)");
     m_pDS->exec("CREATE TABLE import (import_id integer primary key, source_id integer NOT NULL, media_type text NOT NULL, last_sync text, settings text)");
-    m_pDS->exec("CREATE TABLE import_link (import_id integer NOT NULL, media_id integer NOT NULL, media_type text NOT NULL, enabled bool NOT NULL DEFAULT 1)");
+    m_pDS->exec("CREATE TABLE import_link (import_id integer NOT NULL, media_id integer NOT NULL, media_type text NOT NULL, enabled bool NOT NULL DEFAULT 1, path_id integer NULL)");
   }
 }
 
@@ -11041,7 +11041,7 @@ bool CVideoDatabase::RemoveImport(const CMediaImport &import, bool standalone /*
   return result;
 }
 
-bool CVideoDatabase::SetImportForItem(int idMedia, const MediaType& mediaType, const CMediaImport &import)
+bool CVideoDatabase::SetImportForItem(int idMedia, const MediaType& mediaType, const CMediaImport &import, int idPath /* = -1 */)
 {
   if (idMedia <= 0 ||
       mediaType.empty())
@@ -11063,8 +11063,16 @@ bool CVideoDatabase::SetImportForItem(int idMedia, const MediaType& mediaType, c
     if (m_pDS->num_rows() > 0)
       return true;
 
-    sql = PrepareSQL("INSERT INTO import_link (import_id, media_id, media_type) VALUES (%d, %d, '%s')",
-      idImport, idMedia, mediaType.c_str());
+    if (idPath <= 0)
+    {
+      sql = PrepareSQL("INSERT INTO import_link (import_id, media_id, media_type) VALUES (%d, %d, '%s')",
+        idImport, idMedia, mediaType.c_str());
+    }
+    else
+    {
+      sql = PrepareSQL("INSERT INTO import_link (import_id, media_id, media_type, path_id) VALUES (%d, %d, '%s', %d)",
+        idImport, idMedia, mediaType.c_str(), idPath);
+    }
     m_pDS->exec(sql.c_str());
     return true;
   }
@@ -11208,6 +11216,45 @@ void CVideoDatabase::SetImportItemsEnabled(bool enabled, const MediaType& mediaT
   {
     CLog::Log(LOGERROR, "%s (%s) failed", __FUNCTION__, sql.c_str());
   }
+}
+
+bool CVideoDatabase::GetPathForImportedItem(int  idMedia, const MediaType& mediaType, const CMediaImport& import, std::pair<int, std::string>& path)
+{
+  if (idMedia <= 0 || mediaType.empty())
+    return false;
+
+  std::string sql;
+  try
+  {
+    if (m_pDB.get() == NULL || m_pDS.get() == NULL)
+      return false;
+
+    int idImport = GetImportId(import);
+    if (idImport <= 0)
+      return false;
+
+    path.first = -1;
+    path.second.clear();
+
+    sql = PrepareSQL("SELECT path.idPath, path.strPath FROM path "
+      "JOIN import_link ON import_link.path_id = path.idPath "
+      "WHERE import_link.import_id = %d, import_link.media_id = %d AND import_link.media_type = '%s'",
+      idImport, idMedia, mediaType.c_str());
+    int rows = RunQuery(sql);
+    if (rows != 1)
+      return false;
+
+    path.first = m_pDS->fv(0).get_asInt();
+    path.second = m_pDS->fv(1).get_asString();
+
+    m_pDS->close();
+    return true;
+  }
+  catch (...)
+  {
+    CLog::Log(LOGERROR, "%s (%d, %s, %s) error during query: %s", __FUNCTION__, idMedia, mediaType, import, sql);
+  }
+  return false;
 }
 
 void CVideoDatabase::ConstructPath(std::string& strDest, const std::string& strPath, const std::string& strFileName)

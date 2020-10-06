@@ -139,7 +139,6 @@ bool CVideoImportHandler::StartSynchronisation(const CMediaImport& import)
   if (!m_db.Open())
     return false;
 
-  // TODO(Montellese): is a transaction really needed?
   m_db.BeginTransaction();
 
   CServiceBroker::GetAnnouncementManager()->Announce(ANNOUNCEMENT::VideoLibrary, "xbmc",
@@ -155,7 +154,6 @@ bool CVideoImportHandler::FinishSynchronisation(const CMediaImport& import)
   // now make sure the items are enabled
   SetImportedItemsEnabled(import, true);
 
-  // TODO(Montellese): is a transaction really needed?
   m_db.CommitTransaction();
   m_db.Close();
 
@@ -253,9 +251,9 @@ void CVideoImportHandler::SetDetailsForFile(const CFileItem* pItem, bool reset)
     m_db.AddBookMarkToFile(pItem->GetPath(), videoInfoTag->GetResumePoint(), CBookmark::RESUME);
 }
 
-bool CVideoImportHandler::SetImportForItem(const CFileItem* pItem, const CMediaImport& import)
+bool CVideoImportHandler::SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idPath /* = -1 */)
 {
-  return m_db.SetImportForItem(pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import);
+  return m_db.SetImportForItem(pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import, idPath);
 }
 
 void CVideoImportHandler::RemoveFile(CVideoDatabase& videodb, const CFileItem* item) const

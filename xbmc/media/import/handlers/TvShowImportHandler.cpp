@@ -133,7 +133,8 @@ bool CTvShowImportHandler::AddImportedItem(const CMediaImport& import, CFileItem
     return false;
   }
 
-  return SetImportForItem(item, import);
+  int tvshowPathId = m_db.GetPathId(item->GetPath());
+  return SetImportForItem(item, import, tvshowPathId);
 }
 
 bool CTvShowImportHandler::UpdateImportedItem(const CMediaImport& import, CFileItem* item)
@@ -164,41 +165,18 @@ bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const 
 
   const auto tvshow = item->GetVideoInfoTag();
 
-  // get all paths belonging to the tvshow
-  std::map<int, std::string> tvshowPaths;
-  if (!m_db.GetPathsForTvShow(tvshow->m_iDbId, tvshowPaths))
+  // get the path belonging to the tvshow
+  std::pair<int, std::string> tvshowPath;
+  if (!m_db.GetPathForImportedItem(tvshow->m_iDbId, GetMediaType(), import, tvshowPath))
   {
-    GetLogger()->error("failed to get paths for tvshow \"{}\" imported from {}", tvshow->m_strTitle,
-                       import);
+    GetLogger()->error("failed to get the path for tvshow \"{}\" imported from {}",
+                       tvshow->m_strTitle,import);
     return false;
   }
 
-  // something is wrong as the tvshow doesn't have any paths
-  if (tvshowPaths.empty())
-  {
-    GetLogger()->warn("tvshow \"{}\" imported from {} doesn't have any paths", tvshow->m_strTitle,
-                      import);
-    return false;
-  }
-
-  // we only handle the case where more than one path belongs to the tvshow because
-  // we can't delete the tvshow completely before not having synced the episodes
-  if (tvshowPaths.size() == 1)
-    return true;
-
-  for (const auto& tvshowPath : tvshowPaths)
-  {
-    /* TODO(Montellese): THIS DOESN'T WORK!!!
-    // check if the tvshow path is a sub-path of the media import
-    if (URIUtils::PathHasParent(tvshowPath.second, import.c_str()))
-    {
-      // remove the path from the tvshow
-      m_db.RemovePathFromTvShow(tvshow->m_iDbId, tvshowPath.first);
-      m_db.RemoveImportFromItem(tvshow->m_iDbId, GetMediaType(), import);
-      break;
-    }
-    */
-  }
+  // remove the path from the tvshow
+  m_db.RemovePathFromTvShow(tvshow->m_iDbId, tvshowPath.first);
+  m_db.RemoveImportFromItem(tvshow->m_iDbId, GetMediaType(), import);
 
   return true;
 }
