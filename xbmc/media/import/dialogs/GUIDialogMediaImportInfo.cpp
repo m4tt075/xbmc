@@ -100,9 +100,7 @@ bool CGUIDialogMediaImportInfo::ShowForMediaImport(const CFileItemPtr& item)
     return false;
 
   // TODO(Montellese): showing this dialog while the responsible importer or the matching import is
-  // being synchronized
-  //                   might have unexpected side effects
-
+  //                   being synchronized might have unexpected side effects
   if (!dialog->SetMediaImport(item))
     return false;
 
@@ -121,9 +119,7 @@ bool CGUIDialogMediaImportInfo::ShowForMediaImportSource(const CFileItemPtr& ite
     return false;
 
   // TODO(Montellese): showing this dialog while the responsible importer or the matching import is
-  // being synchronized
-  //                   might have unexpected side effects
-
+  //                   being synchronized might have unexpected side effects
   if (!dialog->SetMediaImportSource(item))
     return false;
 
