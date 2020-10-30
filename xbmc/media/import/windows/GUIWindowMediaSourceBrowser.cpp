@@ -211,6 +211,7 @@ bool CGUIWindowMediaSourceBrowser::GetMediaTypesToImport(const MediaTypes& avail
 
     items.Add(pItem);
   }
+  items.Sort(SortByLabel, SortOrderAscending);
 
   return true;
 }
