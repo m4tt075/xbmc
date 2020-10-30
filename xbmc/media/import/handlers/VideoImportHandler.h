@@ -57,13 +57,15 @@ protected:
 
   void PrepareItem(const CMediaImport& import, CFileItem* pItem);
   void SetDetailsForFile(const CFileItem* pItem, bool reset);
-  bool SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idPath = -1);
+  bool SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idFilesystem = -1);
   void RemoveFile(CVideoDatabase& videodb, const CFileItem* item) const;
 
   bool Compare(const CFileItem* originalItem,
                const CFileItem* newItem,
                bool allMetadata = true,
                bool playbackMetadata = true) const;
+
+  static int GetTotalItemsInDb(const CFileItemList& itemsFromDb);
 
   static void RemoveAutoArtwork(CGUIListItem::ArtMap& artwork,
                                 const std::set<std::string>& parentPrefixes);

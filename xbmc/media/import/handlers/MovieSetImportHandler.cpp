@@ -74,7 +74,7 @@ bool CMovieSetImportHandler::RemoveImportedItem(const CMediaImport& import, cons
   if (item == nullptr || !item->HasVideoInfoTag())
     return false;
 
-  m_db.DeleteSet(item->GetVideoInfoTag()->m_iDbId);
+  RemoveImportedItem(m_db, import, item);
 
   return true;
 }
@@ -139,4 +139,74 @@ std::set<Field> CMovieSetImportHandler::IgnoreDifferences() const
           FieldUniqueId,
           FieldUserRating,
           FieldWriter};
+}
+
+bool CMovieSetImportHandler::RemoveImportedItems(CVideoDatabase& videodb, const CMediaImport& import) const
+{
+  std::vector<CFileItemPtr> items;
+  if (!GetLocalItems(videodb, import, items))
+    return false;
+
+  for (const auto& item : items)
+    RemoveImportedItem(videodb, import, item.get());
+
+  return true;
+}
+
+void CMovieSetImportHandler::RemoveImportedItem(CVideoDatabase& videodb,
+                                              const CMediaImport& import,
+                                              const CFileItem* item) const
+{
+  if (item == nullptr || !item->HasVideoInfoTag())
+    return;
+
+  static const SortDescription sortingCountOnly
+  {
+    SortByNone,
+    SortOrderAscending,
+    SortAttributeNone,
+    0,
+    0
+  };
+
+  // get all movies belonging to the current set
+  CVideoDbUrl videoUrlAllMoviesInSet;
+  videoUrlAllMoviesInSet.FromString("videodb://movies/titles/");
+  videoUrlAllMoviesInSet.AddOption("setid", item->GetVideoInfoTag()->m_iDbId);
+
+  // only retrieve the COUNT
+  CFileItemList allMoviesInSet;
+  if (!videodb.GetMoviesByWhere(videoUrlAllMoviesInSet.ToString(), CDatabase::Filter(),
+                                allMoviesInSet, sortingCountOnly))
+  {
+    GetLogger()->warn("failed to get all movies for set \"{}\"", item->GetLabel(),
+      import);
+    return;
+  }
+
+  // get only the imported movies belonging to the current set
+  CVideoDbUrl videoUrlImportedMoviesInSet;
+  videoUrlImportedMoviesInSet.FromString("videodb://movies/titles/");
+  videoUrlImportedMoviesInSet.AddOption("imported", true);
+  videoUrlImportedMoviesInSet.AddOption("source", import.GetSource().GetIdentifier());
+  videoUrlImportedMoviesInSet.AddOption("import", import.GetMediaTypesAsString());
+  videoUrlImportedMoviesInSet.AddOption("setid", item->GetVideoInfoTag()->m_iDbId);
+
+  // only retrieve the COUNT
+  CFileItemList importedMoviesInSet;
+  if (!videodb.GetMoviesByWhere(videoUrlImportedMoviesInSet.ToString(), CDatabase::Filter(),
+                                importedMoviesInSet, sortingCountOnly))
+  {
+    GetLogger()->warn("failed to get all movies for set \"{}\" imported from {}", item->GetLabel(),
+      import);
+    return;
+  }
+
+  const auto allMoviesInSetCount = GetTotalItemsInDb(allMoviesInSet);
+  const auto importedMoviesInSetCount = GetTotalItemsInDb(importedMoviesInSet);
+
+  // check if the set contains any movies not imported from the same import
+  if (allMoviesInSetCount >= 0 && importedMoviesInSetCount >= 0 &&
+      allMoviesInSetCount == importedMoviesInSetCount)
+    videodb.DeleteSet(item->GetVideoInfoTag()->m_iDbId);
 }

@@ -32,7 +32,7 @@ bool CMovieImportHandler::AddImportedItem(const CMediaImport& import, CFileItem*
   }
 
   SetDetailsForFile(item, false);
-  return SetImportForItem(item, import);
+  return SetImportForItem(item, import, m_db.GetFileId(item->GetPath()));
 }
 
 bool CMovieImportHandler::UpdateImportedItem(const CMediaImport& import, CFileItem* item)

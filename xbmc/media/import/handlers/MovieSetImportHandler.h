@@ -46,4 +46,9 @@ protected:
                      std::vector<CFileItemPtr>& items) const override;
 
   std::set<Field> IgnoreDifferences() const override;
+
+  bool RemoveImportedItems(CVideoDatabase& videodb, const CMediaImport& import) const override;
+  void RemoveImportedItem(CVideoDatabase& videodb,
+                          const CMediaImport& import,
+                          const CFileItem* item) const;
 };

@@ -251,40 +251,66 @@ bool CSeasonImportHandler::CleanupImportedItems(const CMediaImport& import)
 
     const auto videoInfoTag = importedSeason->GetVideoInfoTag();
 
-    // get all episodes of the season of the tvshow
-    CVideoDbUrl videoUrl;
-    videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/{}/",
-                                            videoInfoTag->m_iIdShow, videoInfoTag->m_iSeason));
-    videoUrl.AddOption("tvshowid", videoInfoTag->m_iIdShow);
-    if (importedSeason->GetVideoInfoTag()->m_iSeason >= -1)
-      videoUrl.AddOption("season", videoInfoTag->m_iSeason);
-    videoUrl.AddOption("imported", true);
-    videoUrl.AddOption("source", import.GetSource().GetIdentifier());
-    videoUrl.AddOption("import", import.GetMediaTypesAsString());
-
-
-    CFileItemList episodes;
-    if (!m_db.GetEpisodesByWhere(videoUrl.ToString(), CDatabase::Filter(), episodes, true,
-                                 SortDescription(), false))
+    static const SortDescription sortingCountOnly
     {
-      GetLogger()->warn("failed to get episodes for \"{}\" season {} imported from {}",
+      SortByNone,
+      SortOrderAscending,
+      SortAttributeNone,
+      0,
+      0
+    };
+
+    /* TODO(Montellese)
+    // get all episodes of the season of the tvshow
+    CVideoDbUrl videoUrlAllEpisodes;
+    videoUrlAllEpisodes.FromString(StringUtils::Format("videodb://tvshows/titles/{}/{}/",
+      videoInfoTag->m_iIdShow, videoInfoTag->m_iSeason));
+    videoUrlAllEpisodes.AddOption("tvshowid", videoInfoTag->m_iIdShow);
+    if (importedSeason->GetVideoInfoTag()->m_iSeason >= -1)
+      videoUrlAllEpisodes.AddOption("season", videoInfoTag->m_iSeason);
+
+    // only retrieve the COUNT
+    CFileItemList allEpisodes;
+    if (!m_db.GetEpisodesByWhere(videoUrlAllEpisodes.ToString(), CDatabase::Filter(), allEpisodes,
+                                 true, sortingCountOnly, false))
+    {
+      GetLogger()->warn("failed to get all episodes for \"{}\" season {} imported from {}",
+                        videoInfoTag->m_strShowTitle, videoInfoTag->m_iSeason, import);
+      continue;
+    }
+    */
+
+    // get only imported episodes of the season of the tvshow
+    CVideoDbUrl videoUrlImportedEpisodes;
+    videoUrlImportedEpisodes.FromString(StringUtils::Format("videodb://tvshows/titles/{}/{}/",
+      videoInfoTag->m_iIdShow, videoInfoTag->m_iSeason));
+    videoUrlImportedEpisodes.AddOption("tvshowid", videoInfoTag->m_iIdShow);
+    if (importedSeason->GetVideoInfoTag()->m_iSeason >= -1)
+      videoUrlImportedEpisodes.AddOption("season", videoInfoTag->m_iSeason);
+    videoUrlImportedEpisodes.AddOption("imported", true);
+    videoUrlImportedEpisodes.AddOption("source", import.GetSource().GetIdentifier());
+    videoUrlImportedEpisodes.AddOption("import", import.GetMediaTypesAsString());
+
+    // only retrieve the COUNT
+    CFileItemList importedEpisodes;
+    if (!m_db.GetEpisodesByWhere(videoUrlImportedEpisodes.ToString(), CDatabase::Filter(),
+                                 importedEpisodes, true, sortingCountOnly, false))
+    {
+      GetLogger()->warn("failed to get imported episodes for \"{}\" season {} imported from {}",
                         videoInfoTag->m_strShowTitle, videoInfoTag->m_iSeason, import);
       continue;
     }
 
-    // loop through all episodes and count the imported ones
-    bool hasImportedEpisodes = false;
-    for (int i = 0; i < episodes.Size(); ++i)
-    {
-      if (episodes.Get(i)->IsImported())
-      {
-        hasImportedEpisodes = true;
-        break;
-      }
-    }
+    /* TODO(Montellese)
+    const auto allEpisodesCount = GetTotalItemsInDb(allEpisodes);
+    const auto importedEpisodesCount = GetTotalItemsInDb(importedEpisodes);
 
-    // if there are no imported episodes we can remove the season
-    if (!hasImportedEpisodes)
+    // check if the tvshow contains any episodes not imported from the same import
+    if (allEpisodesCount >= 0 && importedEpisodesCount >= 0 &&
+        allEpisodesCount == importedEpisodesCount)
+      RemoveImportedItem(m_db, import, importedSeason.get());
+    */
+    if (GetTotalItemsInDb(importedEpisodes) <= 0)
       RemoveImportedItem(m_db, import, importedSeason.get());
   }
 

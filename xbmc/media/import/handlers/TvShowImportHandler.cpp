@@ -178,6 +178,19 @@ bool CTvShowImportHandler::RemoveImportedItem(const CMediaImport& import, const 
   m_db.RemovePathFromTvShow(tvshow->m_iDbId, tvshowPath.first);
   m_db.RemoveImportFromItem(tvshow->m_iDbId, GetMediaType(), import);
 
+  // TODO(Montellese): is this the right place?
+  // check if there are any more paths for the tvshow
+  std::map<int, std::string> tvshowPaths;
+  if (!m_db.GetPathsForTvShow(tvshow->m_iDbId, tvshowPaths))
+  {
+    GetLogger()->error("failed to get the remaining paths for tvshow \"{}\" imported from {}",
+      tvshow->m_strTitle, import);
+    return false;
+  }
+
+  if (tvshowPaths.empty())
+    RemoveImportedItem(m_db, import, item);
+
   return true;
 }
 
@@ -199,25 +212,61 @@ bool CTvShowImportHandler::CleanupImportedItems(const CMediaImport& import)
 
     const auto tvshow = importedTvShow->GetVideoInfoTag();
 
-    // get all episodes of the tvshow
-    CVideoDbUrl videoUrl;
-    videoUrl.FromString(StringUtils::Format("videodb://tvshows/titles/{}/-1/", tvshow->m_iDbId));
-    videoUrl.AddOption("tvshowid", tvshow->m_iDbId);
-    videoUrl.AddOption("imported", true);
-    videoUrl.AddOption("source", import.GetSource().GetIdentifier());
-    videoUrl.AddOption("import", import.GetMediaTypesAsString());
-
-    CFileItemList episodes;
-    if (!m_db.GetEpisodesByWhere(videoUrl.ToString(), CDatabase::Filter(), episodes, true,
-                                 SortDescription(), false))
+    static const SortDescription sortingCountOnly
     {
-      GetLogger()->warn("failed to get episodes for \"{}\" imported from {}", tvshow->m_strShowTitle,
-                        import);
+      SortByNone,
+      SortOrderAscending,
+      SortAttributeNone,
+      0,
+      0
+    };
+
+    /* TODO(Montellese)
+    // get all episodes of the tvshow
+    CVideoDbUrl videoUrlAllEpisodes;
+    videoUrlAllEpisodes.FromString(StringUtils::Format("videodb://tvshows/titles/{}/-1/", tvshow->m_iDbId));
+    videoUrlAllEpisodes.AddOption("tvshowid", tvshow->m_iDbId);
+
+    // only retrieve the COUNT
+    CFileItemList allEpisodes;
+    if (!m_db.GetEpisodesByWhere(videoUrlAllEpisodes.ToString(), CDatabase::Filter(), allEpisodes,
+                                 true, sortingCountOnly, false))
+    {
+      GetLogger()->warn("failed to get all episodes for \"{}\" imported from {}",
+                        tvshow->m_strShowTitle, import);
+      continue;
+    }
+    */
+
+    // get only imported episodes of the tvshow
+    CVideoDbUrl videoUrlImportedEpisodes;
+    videoUrlImportedEpisodes.FromString(StringUtils::Format("videodb://tvshows/titles/{}/-1/",
+      tvshow->m_iDbId));
+    videoUrlImportedEpisodes.AddOption("tvshowid", tvshow->m_iDbId);
+    videoUrlImportedEpisodes.AddOption("imported", true);
+    videoUrlImportedEpisodes.AddOption("source", import.GetSource().GetIdentifier());
+    videoUrlImportedEpisodes.AddOption("import", import.GetMediaTypesAsString());
+
+    // only retrieve the COUNT
+    CFileItemList importedEpisodes;
+    if (!m_db.GetEpisodesByWhere(videoUrlImportedEpisodes.ToString(), CDatabase::Filter(),
+                                 importedEpisodes, true, sortingCountOnly, false))
+    {
+      GetLogger()->warn("failed to get imported episodes for \"{}\" imported from {}",
+                        tvshow->m_strShowTitle, import);
       continue;
     }
 
-    // if there are no imported episodes we can remove the tvshow
-    if (episodes.IsEmpty())
+    /* TODO(Montellese)
+    const auto allEpisodesCount = GetTotalItemsInDb(allEpisodes);
+    const auto importedEpisodesCount = GetTotalItemsInDb(importedEpisodes);
+
+    // check if the tvshow contains any episodes not imported from the same import
+    if (allEpisodesCount >= 0 && importedEpisodesCount >= 0 &&
+        allEpisodesCount == importedEpisodesCount)
+      RemoveImportedItem(m_db, import, importedTvShow.get());
+    */
+    if (GetTotalItemsInDb(importedEpisodes) <= 0)
       RemoveImportedItem(m_db, import, importedTvShow.get());
   }
 

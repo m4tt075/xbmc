@@ -184,7 +184,7 @@ bool CEpisodeImportHandler::AddImportedItem(const CMediaImport& import, CFileIte
   }
 
   SetDetailsForFile(item, false);
-  return SetImportForItem(item, import);
+  return SetImportForItem(item, import, m_db.GetFileId(item->GetPath()));
 }
 
 bool CEpisodeImportHandler::UpdateImportedItem(const CMediaImport& import, CFileItem* item)

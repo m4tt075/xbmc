@@ -72,6 +72,9 @@ using namespace ADDON;
 using namespace KODI::MESSAGING;
 using namespace KODI::GUILIB;
 
+static constexpr char IMPORT_LINK_FS_TYPE_PATH[] = "path";
+static constexpr char IMPORT_LINK_FS_TYPE_FILE[] = "file";
+
 //********************************************************************************************************************************
 CVideoDatabase::CVideoDatabase(void) = default;
 
@@ -139,8 +142,11 @@ void CVideoDatabase::CreateTables()
               "importer_id text NOT NULL)");
 
   CLog::Log(LOGINFO, "create import table");
-  m_pDS->exec("CREATE TABLE import ( import_id integer primary key, source_id integer NOT NULL, media_type text NOT NULL, last_sync text, settings text)");
-  m_pDS->exec("CREATE TABLE import_link ( import_id integer NOT NULL, media_id integer NOT NULL, media_type text NOT NULL, enabled bool NOT NULL DEFAULT 1, path_id integer NULL)");
+  m_pDS->exec("CREATE TABLE import ( import_id integer primary key, source_id integer NOT NULL, "
+              "media_type text NOT NULL, last_sync text, settings text)");
+  m_pDS->exec("CREATE TABLE import_link ( import_id integer NOT NULL, media_id integer NOT NULL, "
+              "media_type text NOT NULL, filesystem_id integer NULL, "
+              "filesystem_type text NULL, enabled bool NOT NULL DEFAULT 1)");
 
   CLog::Log(LOGINFO, "create tvshow table");
   columns = "CREATE TABLE tvshow ( idShow integer primary key";
@@ -352,6 +358,7 @@ void CVideoDatabase::CreateAnalytics()
               "END");
   m_pDS->exec("CREATE TRIGGER delete_set AFTER DELETE ON sets FOR EACH ROW BEGIN "
               "DELETE FROM art WHERE media_id=old.idSet AND media_type='set'; "
+              "DELETE FROM import_link WHERE media_id=old.idSet AND media_type='set'; "
               "END");
   m_pDS->exec("CREATE TRIGGER delete_person AFTER DELETE ON actor FOR EACH ROW BEGIN "
               "DELETE FROM art WHERE media_id=old.actor_id AND media_type IN ('actor','artist','writer','director'); "
@@ -6015,8 +6022,11 @@ void CVideoDatabase::UpdateTables(int iVersion)
     m_pDS->exec("CREATE TABLE source (source_id integer primary key, identifier text NOT NULL, "
                 "name text NOT NULL, media_types text NOT NULL, settings text, manually_added "
                 "bool, importer_id text NOT NULL)");
-    m_pDS->exec("CREATE TABLE import (import_id integer primary key, source_id integer NOT NULL, media_type text NOT NULL, last_sync text, settings text)");
-    m_pDS->exec("CREATE TABLE import_link (import_id integer NOT NULL, media_id integer NOT NULL, media_type text NOT NULL, enabled bool NOT NULL DEFAULT 1, path_id integer NULL)");
+    m_pDS->exec("CREATE TABLE import (import_id integer primary key, source_id integer NOT NULL, "
+                "media_type text NOT NULL, last_sync text, settings text)");
+    m_pDS->exec("CREATE TABLE import_link (import_id integer NOT NULL, media_id integer NOT NULL,"
+                "media_type text NOT NULL, filesystem_id integer NULL, "
+                "filesystem_type text NULL, enabled bool NOT NULL DEFAULT 1)");
   }
 }
 
@@ -7317,7 +7327,8 @@ bool CVideoDatabase::GetSeasonsByWhere(const std::string& strBaseDir, const Filt
     // Apply the limiting directly here if there's no special sorting but limiting
     if (extFilter.limit.empty() &&
       sorting.sortBy == SortByNone &&
-      (sorting.limitStart > 0 || sorting.limitEnd > 0))
+      (sorting.limitStart > 0 || sorting.limitEnd > 0 ||
+       (sorting.limitStart == 0 && sorting.limitEnd == 0)))
     {
       total = (int)strtol(GetSingleValue(PrepareSQL(strSQL, "COUNT(1)") + strSQLExtra, m_pDS).c_str(), NULL, 10);
       strSQLExtra += DatabaseUtils::BuildLimitClause(sorting.limitEnd, sorting.limitStart);
@@ -7633,7 +7644,8 @@ bool CVideoDatabase::GetMoviesByWhere(const std::string& strBaseDir, const Filte
     // Apply the limiting directly here if there's no special sorting but limiting
     if (extFilter.limit.empty() &&
         sorting.sortBy == SortByNone &&
-       (sorting.limitStart > 0 || sorting.limitEnd > 0))
+       (sorting.limitStart > 0 || sorting.limitEnd > 0 ||
+        (sorting.limitStart == 0 && sorting.limitEnd == 0)))
     {
       total = (int)strtol(GetSingleValue(PrepareSQL(strSQL, "COUNT(1)") + strSQLExtra, m_pDS).c_str(), NULL, 10);
       strSQLExtra += DatabaseUtils::BuildLimitClause(sorting.limitEnd, sorting.limitStart);
@@ -7748,7 +7760,8 @@ bool CVideoDatabase::GetTvShowsByWhere(const std::string& strBaseDir, const Filt
     // Apply the limiting directly here if there's no special sorting but limiting
     if (extFilter.limit.empty() &&
         sorting.sortBy == SortByNone &&
-        (sorting.limitStart > 0 || sorting.limitEnd > 0))
+        (sorting.limitStart > 0 || sorting.limitEnd > 0 ||
+         (sorting.limitStart == 0 && sorting.limitEnd == 0)))
     {
       total = (int)strtol(GetSingleValue(PrepareSQL(strSQL, "COUNT(1)") + strSQLExtra, m_pDS).c_str(), NULL, 10);
       strSQLExtra += DatabaseUtils::BuildLimitClause(sorting.limitEnd, sorting.limitStart);
@@ -7879,7 +7892,8 @@ bool CVideoDatabase::GetEpisodesByWhere(const std::string& strBaseDir, const Fil
     // Apply the limiting directly here if there's no special sorting but limiting
     if (extFilter.limit.empty() &&
       sorting.sortBy == SortByNone &&
-      (sorting.limitStart > 0 || sorting.limitEnd > 0))
+      (sorting.limitStart > 0 || sorting.limitEnd > 0 ||
+       (sorting.limitStart == 0 && sorting.limitEnd == 0)))
     {
       total = (int)strtol(GetSingleValue(PrepareSQL(strSQL, "COUNT(1)") + strSQLExtra, m_pDS).c_str(), NULL, 10);
       strSQLExtra += DatabaseUtils::BuildLimitClause(sorting.limitEnd, sorting.limitStart);
@@ -8775,7 +8789,8 @@ bool CVideoDatabase::GetMusicVideosByWhere(const std::string &baseDir, const Fil
     // Apply the limiting directly here if there's no special sorting but limiting
     if (extFilter.limit.empty() &&
       sorting.sortBy == SortByNone &&
-      (sorting.limitStart > 0 || sorting.limitEnd > 0))
+      (sorting.limitStart > 0 || sorting.limitEnd > 0 ||
+       (sorting.limitStart == 0 && sorting.limitEnd == 0)))
     {
       total = (int)strtol(GetSingleValue(PrepareSQL(strSQL, "COUNT(1)") + strSQLExtra, m_pDS).c_str(), NULL, 10);
       strSQLExtra += DatabaseUtils::BuildLimitClause(sorting.limitEnd, sorting.limitStart);
@@ -9346,9 +9361,18 @@ void CVideoDatabase::CleanDatabase(CGUIDialogProgressBarHandle* handle, const st
     BeginTransaction();
 
     // find all the files
-    std::string sql = "SELECT files.idFile, files.strFileName, path.strPath FROM files "
-                      "INNER JOIN path ON path.idPath = files.idPath "
-                      "WHERE NOT EXISTS (SELECT 1 FROM import WHERE import.idPath = path.idPath OR import.idPath = path.idParentPath)"; // TODO(Montellese): ignore imported files/items
+    std::string sql = PrepareSQL(
+      "SELECT files.idFile, files.strFileName, path.strPath FROM files "
+      "INNER JOIN path ON path.idPath = files.idPath "
+      // ignore imported files / paths / items
+      "WHERE NOT EXISTS "
+      "(SELECT 1 FROM import_link WHERE import_link.filesystem_type = '%s' AND "
+        "(import_link.filesystem_id = path.idPath OR "
+          "import_link.filesystem_id = path.idParentPath)) "
+      "AND NOT EXISTS "
+      "(SELECT 1 FROM import_link WHERE import_link.filesystem_type = '%s' AND "
+        "import_link.filesystem_id = files.idFile)",
+      IMPORT_LINK_FS_TYPE_PATH, IMPORT_LINK_FS_TYPE_FILE);
     if (!paths.empty())
     {
       std::string strPaths;
@@ -10831,6 +10855,16 @@ void CVideoDatabase::RemoveSource(const std::string& sourceIdentifier)
       strSQL = PrepareSQL("DELETE FROM source WHERE source_id = %d", idSource);
       m_pDS->exec(strSQL);
 
+      // delete all paths using the source identifier as the parent path
+      const int idPath = GetPathId(sourceIdentifier);
+      if (idPath > 0)
+      {
+        strSQL = PrepareSQL("DELETE FROM path WHERE idParentPath = %d", idPath);
+        m_pDS->exec(strSQL);
+      }
+      // delete the path of the source identifier itself
+      DeletePath(-1, sourceIdentifier);
+
       CommitTransaction();
 
       Compress(false);
@@ -11054,10 +11088,10 @@ bool CVideoDatabase::RemoveImport(const CMediaImport &import, bool standalone /*
   return result;
 }
 
-bool CVideoDatabase::SetImportForItem(int idMedia, const MediaType& mediaType, const CMediaImport &import, int idPath /* = -1 */)
+bool CVideoDatabase::SetImportForItem(int idMedia, const MediaType& mediaType,
+                                      const CMediaImport &import, int idFilesystem /* = -1 */)
 {
-  if (idMedia <= 0 ||
-      mediaType.empty())
+  if (idMedia <= 0 || mediaType.empty())
     return false;
 
   std::string sql = "";
@@ -11076,16 +11110,24 @@ bool CVideoDatabase::SetImportForItem(int idMedia, const MediaType& mediaType, c
     if (m_pDS->num_rows() > 0)
       return true;
 
-    if (idPath <= 0)
+    if (idFilesystem <= 0)
     {
-      sql = PrepareSQL("INSERT INTO import_link (import_id, media_id, media_type) VALUES (%d, %d, '%s')",
+      sql = PrepareSQL("INSERT INTO import_link "
+                       "(import_id, media_id, media_type) "
+                       "VALUES (%d, %d, '%s')",
         idImport, idMedia, mediaType.c_str());
     }
     else
     {
-      sql = PrepareSQL("INSERT INTO import_link (import_id, media_id, media_type, path_id) VALUES (%d, %d, '%s', %d)",
-        idImport, idMedia, mediaType.c_str(), idPath);
-    }
+      auto filesystemType = IMPORT_LINK_FS_TYPE_FILE;
+      if (CMediaTypes::IsContainer(mediaType))
+        filesystemType = IMPORT_LINK_FS_TYPE_PATH;
+
+      sql = PrepareSQL("INSERT INTO import_link "
+                       "(import_id, media_id, media_type, filesystem_type, filesystem_id) "
+                       "VALUES (%d, %d, '%s', '%s', %d)",
+        idImport, idMedia, mediaType.c_str(), filesystemType, idFilesystem);
+      }
     m_pDS->exec(sql.c_str());
     return true;
   }
@@ -11096,7 +11138,8 @@ bool CVideoDatabase::SetImportForItem(int idMedia, const MediaType& mediaType, c
   return false;
 }
 
-bool CVideoDatabase::RemoveImportFromItem(int idMedia, const MediaType& mediaType, const CMediaImport& import)
+bool CVideoDatabase::RemoveImportFromItem(int idMedia, const MediaType& mediaType,
+                                          const CMediaImport& import)
 {
   if (idMedia <= 0 ||
       mediaType.empty())
@@ -11153,33 +11196,39 @@ bool CVideoDatabase::DeleteItemsFromImport(const CMediaImport& import)
       else
         continue;
 
+      /* TODO(Montellese): remove all parent paths
       // remove all paths belonging to the imported items being deleted
-      sql = PrepareSQL("DELETE FROM path WHERE "
-                        "EXISTS (SELECT 1 FROM files "
-                                "JOIN %s ON %s.idFile = files.idFile "
-                                "JOIN import_link ON import_link.media_id = %s.%s AND import_link.media_type = '%s' "
-                                "WHERE files.idPath = path.idPath AND import_link.import_id = %d)",
-                      table.c_str(), table.c_str(), table.c_str(), idColumn.c_str(), mediaType.c_str(), idImport);
+      sql = PrepareSQL("DELETE FROM path WHERE EXISTS "
+                        "(SELECT 1 FROM import_link WHERE "
+                          "import_link.import_id = %d AND import_link.media_type = '%s' AND "
+                          "import_link.filesystem_type = '%s' AND "
+                          "import_link.filesystem_id = path.idPath)",
+        idImport, mediaType.c_str(), IMPORT_LINK_FS_TYPE_PATH);
       m_pDS->exec(sql.c_str());
+      */
 
       // remove all files belonging to the imported items being deleted
-      sql = PrepareSQL("DELETE FROM files WHERE "
-                        "EXISTS (SELECT 1 FROM %s "
-                                "JOIN import_link ON import_link.media_id = %s.%s AND import_link.media_type = '%s' "
-                                "WHERE %s.idFile = files.idFile AND import_link.import_id = %d)",
-                                table.c_str(), table.c_str(), idColumn.c_str(), mediaType.c_str(), table.c_str(), idImport);
+      sql = PrepareSQL("DELETE FROM files WHERE EXISTS "
+                        "(SELECT 1 FROM import_link WHERE "
+                          "import_link.import_id = %d AND import_link.media_type = '%s' AND "
+                          "import_link.filesystem_type = '%s' AND "
+                          "import_link.filesystem_id = files.idFile)",
+        idImport, mediaType.c_str(), IMPORT_LINK_FS_TYPE_FILE);
       m_pDS->exec(sql.c_str());
 
       // remove the actual items
-      sql = PrepareSQL("DELETE FROM %s WHERE "
-                        "EXISTS (SELECT 1 FROM import_link WHERE import_link.media_id = %s.%s AND import_link.media_type = '%s' AND import_link.import_id = %d)",
-                        table.c_str(), table.c_str(), idColumn.c_str(), mediaType.c_str(), idImport);
+      sql = PrepareSQL("DELETE FROM %s WHERE EXISTS"
+                        "(SELECT 1 FROM import_link WHERE "
+                          "import_link.import_id = %d AND import_link.media_type = '%s' AND "
+                          "import_link.media_id = %s.%s)",
+        table.c_str(), idImport, mediaType.c_str(), table.c_str(), idColumn.c_str());
+      m_pDS->exec(sql.c_str());
+
+      // remove any remaining import links
+      sql = PrepareSQL("DELETE FROM import_link WHERE import_id = %d AND media_type = '%s'",
+        idImport, mediaType.c_str());
       m_pDS->exec(sql.c_str());
     }
-
-    // remove any remaining import links
-    sql = PrepareSQL("DELETE FROM import_link WHERE import_id = %d", idImport);
-    m_pDS->exec(sql.c_str());
 
     return true;
   }
@@ -11250,11 +11299,12 @@ bool CVideoDatabase::GetPathForImportedItem(int  idMedia, const MediaType& media
     path.second.clear();
 
     sql = PrepareSQL("SELECT path.idPath, path.strPath FROM path "
-      "JOIN import_link ON import_link.path_id = path.idPath "
-      "WHERE import_link.import_id = %d, import_link.media_id = %d AND import_link.media_type = '%s'",
-      idImport, idMedia, mediaType.c_str());
-    int rows = RunQuery(sql);
-    if (rows != 1)
+      "JOIN import_link ON import_link.filesystem_id = path.idPath "
+      "WHERE import_link.import_id = %d AND import_link.media_type = '%s' AND "
+      "import_link.media_id = %d AND import_link.filesystem_type = '%s'",
+      idImport, idMedia, mediaType.c_str(), IMPORT_LINK_FS_TYPE_PATH);
+    m_pDS->query(sql);
+    if (m_pDS->eof())
       return false;
 
     path.first = m_pDS->fv(0).get_asInt();

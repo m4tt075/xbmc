@@ -251,9 +251,9 @@ void CVideoImportHandler::SetDetailsForFile(const CFileItem* pItem, bool reset)
     m_db.AddBookMarkToFile(pItem->GetPath(), videoInfoTag->GetResumePoint(), CBookmark::RESUME);
 }
 
-bool CVideoImportHandler::SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idPath /* = -1 */)
+bool CVideoImportHandler::SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idFilesystem /* = -1 */)
 {
-  return m_db.SetImportForItem(pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import, idPath);
+  return m_db.SetImportForItem(pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import, idFilesystem);
 }
 
 void CVideoImportHandler::RemoveFile(CVideoDatabase& videodb, const CFileItem* item) const
@@ -365,6 +365,20 @@ bool CVideoImportHandler::Compare(const CFileItem* originalItem,
   return true;
 }
 
+int CVideoImportHandler::GetTotalItemsInDb(const CFileItemList& itemsFromDb)
+{
+  static const std::string PROPERTY_TOTAL_ITEMS_IN_DB = "total";
+
+  if (itemsFromDb.HasProperty(PROPERTY_TOTAL_ITEMS_IN_DB))
+  {
+    const auto totalItemsInDb = itemsFromDb.GetProperty(PROPERTY_TOTAL_ITEMS_IN_DB);
+    if (totalItemsInDb.isInteger())
+      return totalItemsInDb.asInteger32();
+  }
+
+  return -1;
+}
+                                  
 void CVideoImportHandler::RemoveAutoArtwork(CGUIListItem::ArtMap& artwork,
                                             const std::set<std::string>& parentPrefixes)
 {

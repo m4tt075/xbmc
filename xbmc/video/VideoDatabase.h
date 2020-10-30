@@ -521,6 +521,13 @@ public:
   bool GetFileInfo(const std::string& strFilenameAndPath, CVideoInfoTag& details, int idFile = -1);
 
   int GetPathId(const std::string& strPath);
+
+  /*! \brief Get the id of a file from path
+   \param url full path to the file
+   \return id of the file, -1 if it is not in the db.
+   */
+  int GetFileId(const std::string& url);
+
   int GetTvShowId(const std::string& strPath);
   int GetEpisodeId(const std::string& strFilenameAndPath, int idEpisode=-1, int idSeason=-1); // idEpisode, idSeason are used for multipart episodes as hints
   int GetSeasonId(int idShow, int season);
@@ -867,9 +874,9 @@ public:
    \param idMedia Database ID of the item belonging to the given import
    \param mediaType Media type of the item
    \param import Import the given item belongs to
-   \param idPath Database ID of the path belonging to the media item (only for parent objects)
+   \param idFilesystem Database ID of the file / path belonging to the media item
    */
-  bool SetImportForItem(int idMedia, const MediaType& mediaType, const CMediaImport& import, int idPath = -1);
+  bool SetImportForItem(int idMedia, const MediaType& mediaType, const CMediaImport& import, int idFilesystem = -1);
 
   /*! \brief Remove the import from an item
    \param idMedia Database ID of the item belonging to the given import
@@ -1026,12 +1033,6 @@ protected:
    \return id of the file, -1 if it is not in the db.
    */
   int GetFileId(const CFileItem &item);
-
-  /*! \brief Get the id of a file from path
-   \param url full path to the file
-   \return id of the file, -1 if it is not in the db.
-   */
-  int GetFileId(const std::string& url);
 
   /*! \brief Get the id of a source from its identifier
    \param sourceIdentifier identifier of the source

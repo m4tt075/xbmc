@@ -17,6 +17,8 @@ public:
   CMediaImportRemovalTask(const CMediaImport& import, MediaImportHandlerPtr importHandler);
   virtual ~CMediaImportRemovalTask() = default;
 
+  MediaType GetMediaType() const;
+
   // implementation of IMediaImportTask
   MediaImportTaskType GetType() const override { return MediaImportTaskType::Removal; }
   bool DoWork() override;
