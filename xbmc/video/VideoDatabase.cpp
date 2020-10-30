@@ -7326,13 +7326,14 @@ bool CVideoDatabase::GetSeasonsByWhere(const std::string& strBaseDir, const Filt
     strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? extFilter.fields.c_str() : "*") + strSQLExtra;
 
     int iRowsFound = RunQuery(strSQL);
-    if (iRowsFound <= 0)
-      return iRowsFound == 0;
 
     // store the total value of items as a property
     if (total < iRowsFound)
       total = iRowsFound;
     items.SetProperty("total", total);
+
+    if (iRowsFound <= 0)
+      return iRowsFound == 0;
 
     // sanitize the video url by removing the trailing "-1/" if present
     if (appendFullShowPath)
@@ -7641,13 +7642,14 @@ bool CVideoDatabase::GetMoviesByWhere(const std::string& strBaseDir, const Filte
     strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? extFilter.fields.c_str() : "*") + strSQLExtra;
 
     int iRowsFound = RunQuery(strSQL);
-    if (iRowsFound <= 0)
-      return iRowsFound == 0;
 
     // store the total value of items as a property
     if (total < iRowsFound)
       total = iRowsFound;
     items.SetProperty("total", total);
+
+    if (iRowsFound <= 0)
+      return iRowsFound == 0;
 
     DatabaseResults results;
     results.reserve(iRowsFound);
@@ -7755,13 +7757,14 @@ bool CVideoDatabase::GetTvShowsByWhere(const std::string& strBaseDir, const Filt
     strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? extFilter.fields.c_str() : "*") + strSQLExtra;
 
     int iRowsFound = RunQuery(strSQL);
-    if (iRowsFound <= 0)
-      return iRowsFound == 0;
 
     // store the total value of items as a property
     if (total < iRowsFound)
       total = iRowsFound;
     items.SetProperty("total", total);
+
+    if (iRowsFound <= 0)
+      return iRowsFound == 0;
 
     DatabaseResults results;
     results.reserve(iRowsFound);
@@ -7885,13 +7888,14 @@ bool CVideoDatabase::GetEpisodesByWhere(const std::string& strBaseDir, const Fil
     strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? extFilter.fields.c_str() : "*") + strSQLExtra;
 
     int iRowsFound = RunQuery(strSQL);
-    if (iRowsFound <= 0)
-      return iRowsFound == 0;
 
     // store the total value of items as a property
     if (total < iRowsFound)
       total = iRowsFound;
     items.SetProperty("total", total);
+
+    if (iRowsFound <= 0)
+      return iRowsFound == 0;
 
     DatabaseResults results;
     results.reserve(iRowsFound);
@@ -8780,13 +8784,14 @@ bool CVideoDatabase::GetMusicVideosByWhere(const std::string &baseDir, const Fil
     strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? extFilter.fields.c_str() : "*") + strSQLExtra;
 
     int iRowsFound = RunQuery(strSQL);
-    if (iRowsFound <= 0)
-      return iRowsFound == 0;
 
     // store the total value of items as a property
     if (total < iRowsFound)
       total = iRowsFound;
     items.SetProperty("total", total);
+
+    if (iRowsFound <= 0)
+      return iRowsFound == 0;
 
     DatabaseResults results;
     results.reserve(iRowsFound);
