@@ -35,7 +35,6 @@ public:
                                      const CFileItem* item,
                                      const std::vector<CFileItemPtr>& localItems) const override;
 
-  bool AddImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool UpdateImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool RemoveImportedItem(const CMediaImport& import, const CFileItem* item) override;
   bool CleanupImportedItems(const CMediaImport& import) override { return true; }
@@ -47,8 +46,13 @@ protected:
 
   std::set<Field> IgnoreDifferences() const override;
 
-  bool RemoveImportedItems(CVideoDatabase& videodb, const CMediaImport& import) const override;
-  void RemoveImportedItem(CVideoDatabase& videodb,
+  bool AddImportedItem(CVideoDatabase& videodb,
+                       const CMediaImport& import,
+                       CFileItem* item) override;
+
+  bool RemoveImportedItems(CVideoDatabase& videodb,
+                           const CMediaImport& import) const override;
+  bool RemoveImportedItem(CVideoDatabase& videodb,
                           const CMediaImport& import,
                           const CFileItem* item) const;
 };

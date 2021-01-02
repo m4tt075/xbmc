@@ -397,6 +397,33 @@ public:
   std::vector<MediaImport*> getImports() const;
 #endif
 
+#ifdef DOXYGEN_SHOULD_USE_THIS
+  ///
+  /// \ingroup python_xbmcmediaimport_mediaimport
+  /// @brief \python_func{ getImportByMediaType(mediaType) }
+  ///-----------------------------------------------------------------------
+  /// Returns the media import matching the given media type belonging to
+  /// the provider.
+  ///
+  /// @return Media import belonging to the provider.
+  ///
+  ///
+  ///-----------------------------------------------------------------------
+  /// @python_v19
+  ///
+  /// **Example:**
+  /// ~~~~~~~~~~~~~{.py}
+  /// ...
+  /// # getImport()
+  /// import = mediaProvider.getImportByMediaType('movie')
+  /// ...
+  /// ~~~~~~~~~~~~~
+  ///
+  getImportByMediaType();
+#else
+  MediaImport* getImportByMediaType(const String& mediaType) const;
+#endif
+
 #ifndef SWIG
 private:
   XBMCAddon::xbmcaddon::Settings* createSettings(MediaImportSourceSettingsPtr settings);

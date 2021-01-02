@@ -34,25 +34,6 @@ CFileItemPtr CMovieSetImportHandler::FindMatchingLocalItem(
   return nullptr;
 }
 
-bool CMovieSetImportHandler::AddImportedItem(const CMediaImport& import, CFileItem* item)
-{
-  if (item == nullptr)
-    return false;
-
-  PrepareItem(import, item);
-
-  item->GetVideoInfoTag()->m_iDbId =
-      m_db.SetDetailsForMovieSet(*(item->GetVideoInfoTag()), item->GetArt());
-  if (item->GetVideoInfoTag()->m_iDbId <= 0)
-  {
-    GetLogger()->error("failed to set details for added movie set \"{}\" imported from {}",
-                       item->GetLabel(), import);
-    return false;
-  }
-
-  return SetImportForItem(item, import);
-}
-
 bool CMovieSetImportHandler::UpdateImportedItem(const CMediaImport& import, CFileItem* item)
 {
   if (item == nullptr || !item->HasVideoInfoTag() || item->GetVideoInfoTag()->m_iDbId <= 0)
@@ -71,12 +52,7 @@ bool CMovieSetImportHandler::UpdateImportedItem(const CMediaImport& import, CFil
 
 bool CMovieSetImportHandler::RemoveImportedItem(const CMediaImport& import, const CFileItem* item)
 {
-  if (item == nullptr || !item->HasVideoInfoTag())
-    return false;
-
-  RemoveImportedItem(m_db, import, item);
-
-  return true;
+  return RemoveImportedItem(m_db, import, item);
 }
 
 bool CMovieSetImportHandler::GetLocalItems(CVideoDatabase& videodb,
@@ -141,6 +117,27 @@ std::set<Field> CMovieSetImportHandler::IgnoreDifferences() const
           FieldWriter};
 }
 
+bool CMovieSetImportHandler::AddImportedItem(CVideoDatabase& videodb,
+                                             const CMediaImport& import,
+                                             CFileItem* item)
+{
+  if (item == nullptr)
+    return false;
+
+  PrepareItem(videodb, import, item);
+
+  item->GetVideoInfoTag()->m_iDbId =
+    videodb.SetDetailsForMovieSet(*(item->GetVideoInfoTag()), item->GetArt());
+  if (item->GetVideoInfoTag()->m_iDbId <= 0)
+  {
+    GetLogger()->error("failed to set details for added movie set \"{}\" imported from {}",
+      item->GetLabel(), import);
+    return false;
+  }
+
+  return SetImportForItem(videodb, item, import);
+}
+
 bool CMovieSetImportHandler::RemoveImportedItems(CVideoDatabase& videodb, const CMediaImport& import) const
 {
   std::vector<CFileItemPtr> items;
@@ -153,12 +150,12 @@ bool CMovieSetImportHandler::RemoveImportedItems(CVideoDatabase& videodb, const 
   return true;
 }
 
-void CMovieSetImportHandler::RemoveImportedItem(CVideoDatabase& videodb,
-                                              const CMediaImport& import,
-                                              const CFileItem* item) const
+bool CMovieSetImportHandler::RemoveImportedItem(CVideoDatabase& videodb,
+                                                const CMediaImport& import,
+                                                const CFileItem* item) const
 {
   if (item == nullptr || !item->HasVideoInfoTag())
-    return;
+    return false;
 
   static const SortDescription sortingCountOnly
   {
@@ -181,7 +178,7 @@ void CMovieSetImportHandler::RemoveImportedItem(CVideoDatabase& videodb,
   {
     GetLogger()->warn("failed to get all movies for set \"{}\"", item->GetLabel(),
       import);
-    return;
+    return false;
   }
 
   // get only the imported movies belonging to the current set
@@ -199,7 +196,7 @@ void CMovieSetImportHandler::RemoveImportedItem(CVideoDatabase& videodb,
   {
     GetLogger()->warn("failed to get all movies for set \"{}\" imported from {}", item->GetLabel(),
       import);
-    return;
+    return false;
   }
 
   const auto allMoviesInSetCount = GetTotalItemsInDb(allMoviesInSet);
@@ -209,4 +206,6 @@ void CMovieSetImportHandler::RemoveImportedItem(CVideoDatabase& videodb,
   if (allMoviesInSetCount >= 0 && importedMoviesInSetCount >= 0 &&
       allMoviesInSetCount == importedMoviesInSetCount)
     videodb.DeleteSet(item->GetVideoInfoTag()->m_iDbId);
+
+  return true;
 }

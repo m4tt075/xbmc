@@ -39,7 +39,6 @@ public:
 
   bool StartSynchronisation(const CMediaImport& import) override;
 
-  bool AddImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool UpdateImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool RemoveImportedItem(const CMediaImport& import, const CFileItem* item) override;
   bool CleanupImportedItems(const CMediaImport& import) override;
@@ -51,8 +50,12 @@ protected:
 
   std::set<Field> IgnoreDifferences() const override;
 
+  bool AddImportedItem(CVideoDatabase& videodb,
+                       const CMediaImport& import,
+                       CFileItem* item) override;
+
   bool RemoveImportedItems(CVideoDatabase& videodb, const CMediaImport& import) const override;
-  void RemoveImportedItem(CVideoDatabase& videodb,
+  bool RemoveImportedItem(CVideoDatabase& videodb,
                           const CMediaImport& import,
                           const CFileItem* item) const;
 

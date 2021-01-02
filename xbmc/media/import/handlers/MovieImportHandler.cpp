@@ -15,26 +15,6 @@
 
 #include <fmt/ostream.h>
 
-bool CMovieImportHandler::AddImportedItem(const CMediaImport& import, CFileItem* item)
-{
-  if (item == nullptr)
-    return false;
-
-  PrepareItem(import, item);
-
-  item->GetVideoInfoTag()->m_iDbId =
-      m_db.SetDetailsForMovie(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt());
-  if (item->GetVideoInfoTag()->m_iDbId <= 0)
-  {
-    GetLogger()->error("failed to set details for added movie \"{}\" imported from {}",
-                       item->GetLabel(), import);
-    return false;
-  }
-
-  SetDetailsForFile(item, false);
-  return SetImportForItem(item, import, m_db.GetFileId(item->GetPath()));
-}
-
 bool CMovieImportHandler::UpdateImportedItem(const CMediaImport& import, CFileItem* item)
 {
   if (item == nullptr || !item->HasVideoInfoTag() || item->GetVideoInfoTag()->m_iDbId <= 0)
@@ -49,7 +29,7 @@ bool CMovieImportHandler::UpdateImportedItem(const CMediaImport& import, CFileIt
   }
 
   if (import.Settings()->UpdatePlaybackMetadataFromSource())
-    SetDetailsForFile(item, true);
+    SetDetailsForFile(m_db, item, true);
 
   return true;
 }
@@ -96,4 +76,26 @@ std::set<Field> CMovieImportHandler::IgnoreDifferences() const
       FieldAlbum,          FieldArtist,     FieldEpisodeNumber,     FieldEpisodeNumberSpecialSort,
       FieldProductionCode, FieldSeason,     FieldSeasonSpecialSort, FieldTrackNumber,
       FieldTvShowStatus,   FieldTvShowTitle};
+}
+
+bool CMovieImportHandler::AddImportedItem(CVideoDatabase& videodb,
+                                          const CMediaImport& import,
+                                          CFileItem* item)
+{
+  if (item == nullptr)
+    return false;
+
+  PrepareItem(videodb, import, item);
+
+  item->GetVideoInfoTag()->m_iDbId =
+    videodb.SetDetailsForMovie(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt());
+  if (item->GetVideoInfoTag()->m_iDbId <= 0)
+  {
+    GetLogger()->error("failed to set details for added movie \"{}\" imported from {}",
+      item->GetLabel(), import);
+    return false;
+  }
+
+  SetDetailsForFile(videodb, item, false);
+  return SetImportForItem(videodb, item, import, m_db.GetFileId(item->GetPath()));
 }

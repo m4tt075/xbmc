@@ -11196,17 +11196,6 @@ bool CVideoDatabase::DeleteItemsFromImport(const CMediaImport& import)
       else
         continue;
 
-      /* TODO(Montellese): remove all parent paths
-      // remove all paths belonging to the imported items being deleted
-      sql = PrepareSQL("DELETE FROM path WHERE EXISTS "
-                        "(SELECT 1 FROM import_link WHERE "
-                          "import_link.import_id = %d AND import_link.media_type = '%s' AND "
-                          "import_link.filesystem_type = '%s' AND "
-                          "import_link.filesystem_id = path.idPath)",
-        idImport, mediaType.c_str(), IMPORT_LINK_FS_TYPE_PATH);
-      m_pDS->exec(sql.c_str());
-      */
-
       // remove all files belonging to the imported items being deleted
       sql = PrepareSQL("DELETE FROM files WHERE EXISTS "
                         "(SELECT 1 FROM import_link WHERE "
@@ -11302,7 +11291,7 @@ bool CVideoDatabase::GetPathForImportedItem(int  idMedia, const MediaType& media
       "JOIN import_link ON import_link.filesystem_id = path.idPath "
       "WHERE import_link.import_id = %d AND import_link.media_type = '%s' AND "
       "import_link.media_id = %d AND import_link.filesystem_type = '%s'",
-      idImport, idMedia, mediaType.c_str(), IMPORT_LINK_FS_TYPE_PATH);
+      idImport, mediaType.c_str(), idMedia, IMPORT_LINK_FS_TYPE_PATH);
     m_pDS->query(sql);
     if (m_pDS->eof())
       return false;
