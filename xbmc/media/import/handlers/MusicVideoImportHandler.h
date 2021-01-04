@@ -26,7 +26,6 @@ public:
 
   MediaType GetMediaType() const override { return MediaTypeMusicVideo; }
 
-  bool AddImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool UpdateImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool RemoveImportedItem(const CMediaImport& import, const CFileItem* item) override;
   bool CleanupImportedItems(const CMediaImport& import) override { return true; }
@@ -34,7 +33,11 @@ public:
 protected:
   virtual bool GetLocalItems(CVideoDatabase& videodb,
                              const CMediaImport& import,
-                             std::vector<CFileItemPtr>& items) const override;
+                             std::vector<CFileItemPtr>& items) override;
 
   virtual std::set<Field> IgnoreDifferences() const override;
+
+  bool AddImportedItem(CVideoDatabase& videodb,
+                       const CMediaImport& import,
+                       CFileItem* item) override;
 };

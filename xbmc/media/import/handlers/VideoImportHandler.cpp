@@ -38,7 +38,7 @@ std::string CVideoImportHandler::GetItemLabel(const CFileItem* item) const
 }
 
 bool CVideoImportHandler::GetLocalItems(const CMediaImport& import,
-                                        std::vector<CFileItemPtr>& items) const
+                                        std::vector<CFileItemPtr>& items)
 {
   if (!m_db.Open())
     return false;
@@ -163,6 +163,14 @@ bool CVideoImportHandler::FinishSynchronisation(const CMediaImport& import)
   return true;
 }
 
+bool CVideoImportHandler::AddImportedItem(const CMediaImport& import, CFileItem* item)
+{
+  if (!m_db.IsOpen())
+    return false;
+
+  return AddImportedItem(m_db, import, item);
+}
+
 bool CVideoImportHandler::RemoveImportedItems(const CMediaImport& import)
 {
   if (!m_db.Open())
@@ -170,7 +178,7 @@ bool CVideoImportHandler::RemoveImportedItems(const CMediaImport& import)
 
   m_db.BeginTransaction();
 
-  bool success = RemoveImportedItems(m_db, import);
+  bool success = RemoveImportedItems(m_db, import, false);
 
   if (success)
     m_db.CommitTransaction();
@@ -194,12 +202,15 @@ void CVideoImportHandler::SetImportedItemsEnabled(const CMediaImport& import, bo
 }
 
 bool CVideoImportHandler::RemoveImportedItems(CVideoDatabase& videodb,
-                                              const CMediaImport& import) const
+                                              const CMediaImport& import,
+                                              bool onlyIfEmpty)
 {
   return videodb.DeleteItemsFromImport(import);
 }
 
-void CVideoImportHandler::PrepareItem(const CMediaImport& import, CFileItem* pItem)
+void CVideoImportHandler::PrepareItem(CVideoDatabase& videodb,
+                                      const CMediaImport& import,
+                                      CFileItem* pItem)
 {
   if (pItem == nullptr || !pItem->HasVideoInfoTag() || import.GetMediaTypes().empty() ||
       import.GetSource().GetIdentifier().empty())
@@ -212,7 +223,7 @@ void CVideoImportHandler::PrepareItem(const CMediaImport& import, CFileItem* pIt
   const auto& sourcePathId = m_sourceIds.find(sourceId);
   if (sourcePathId == m_sourceIds.end())
   {
-    idPath = m_db.AddPath(sourceId);
+    idPath = videodb.AddPath(sourceId);
     m_sourceIds.emplace(sourceId, idPath);
   }
   else
@@ -229,37 +240,35 @@ void CVideoImportHandler::PrepareItem(const CMediaImport& import, CFileItem* pIt
 
   if (!pItem->m_bIsFolder)
   {
-    videoInfoTag->m_iFileId = m_db.AddFile(
+    videoInfoTag->m_iFileId = videodb.AddFile(
         pItem->GetPath(), sourceId, videoInfoTag->GetPlayCount(), videoInfoTag->m_lastPlayed);
   }
 }
 
-void CVideoImportHandler::SetDetailsForFile(const CFileItem* pItem, bool reset)
+void CVideoImportHandler::SetDetailsForFile(CVideoDatabase& videodb,
+                                            const CFileItem* pItem,
+                                            bool reset)
 {
   const auto videoInfoTag = pItem->GetVideoInfoTag();
 
   // update playcount and lastplayed
-  m_db.SetPlayCount(*pItem, videoInfoTag->GetPlayCount(), videoInfoTag->m_lastPlayed, false);
+  videodb.SetPlayCount(*pItem, videoInfoTag->GetPlayCount(), videoInfoTag->m_lastPlayed, false);
 
   // clean resume bookmark
   if (reset)
-    m_db.DeleteResumeBookMark(*pItem, false);
+    videodb.DeleteResumeBookMark(*pItem, false);
 
   if (videoInfoTag->GetResumePoint().IsPartWay())
-    m_db.AddBookMarkToFile(pItem->GetPath(), videoInfoTag->GetResumePoint(), CBookmark::RESUME);
+    videodb.AddBookMarkToFile(pItem->GetPath(), videoInfoTag->GetResumePoint(), CBookmark::RESUME);
 }
 
-bool CVideoImportHandler::SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idPath /* = -1 */)
+bool CVideoImportHandler::SetImportForItem(CVideoDatabase& videodb,
+                                           const CFileItem* pItem,
+                                           const CMediaImport& import,
+                                           int idFilesystem /* = -1 */)
 {
-  return m_db.SetImportForItem(pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import, idPath);
-}
-
-void CVideoImportHandler::RemoveFile(CVideoDatabase& videodb, const CFileItem* item) const
-{
-  if (!videodb.IsOpen() || item == nullptr || !item->HasVideoInfoTag())
-    return;
-
-  videodb.DeleteFile(item->GetVideoInfoTag()->m_iFileId, item->GetVideoInfoTag()->GetPath());
+  return videodb.SetImportForItem(
+    pItem->GetVideoInfoTag()->m_iDbId, GetMediaType(), import, idFilesystem);
 }
 
 bool CVideoImportHandler::Compare(const CFileItem* originalItem,
@@ -363,6 +372,28 @@ bool CVideoImportHandler::Compare(const CFileItem* originalItem,
   return true;
 }
 
+int CVideoImportHandler::GetTotalItemsInDb(const CFileItemList& itemsFromDb)
+{
+  static const std::string PROPERTY_TOTAL_ITEMS_IN_DB = "total";
+
+  if (itemsFromDb.HasProperty(PROPERTY_TOTAL_ITEMS_IN_DB))
+  {
+    const auto totalItemsInDb = itemsFromDb.GetProperty(PROPERTY_TOTAL_ITEMS_IN_DB);
+    if (totalItemsInDb.isInteger())
+      return totalItemsInDb.asInteger32();
+  }
+
+  return -1;
+}
+
+void CVideoImportHandler::RemoveFile(CVideoDatabase& videodb, const CFileItem* item)
+{
+  if (!videodb.IsOpen() || item == nullptr || !item->HasVideoInfoTag())
+    return;
+
+  videodb.DeleteFile(item->GetVideoInfoTag()->m_iFileId, item->GetVideoInfoTag()->GetPath());
+}
+                                  
 void CVideoImportHandler::RemoveAutoArtwork(CGUIListItem::ArtMap& artwork,
                                             const std::set<std::string>& parentPrefixes)
 {

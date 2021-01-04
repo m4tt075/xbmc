@@ -35,15 +35,26 @@ public:
                                      const CFileItem* item,
                                      const std::vector<CFileItemPtr>& localItems) const override;
 
-  bool AddImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool UpdateImportedItem(const CMediaImport& import, CFileItem* item) override;
   bool RemoveImportedItem(const CMediaImport& import, const CFileItem* item) override;
-  bool CleanupImportedItems(const CMediaImport& import) override { return true; }
+  bool CleanupImportedItems(const CMediaImport& import) override;
 
 protected:
   bool GetLocalItems(CVideoDatabase& videodb,
                      const CMediaImport& import,
-                     std::vector<CFileItemPtr>& items) const override;
+                     std::vector<CFileItemPtr>& items) override;
 
   std::set<Field> IgnoreDifferences() const override;
+
+  bool AddImportedItem(CVideoDatabase& videodb,
+                       const CMediaImport& import,
+                       CFileItem* item) override;
+
+  bool RemoveImportedItems(CVideoDatabase& videodb,
+                           const CMediaImport& import,
+                           bool onlyIfEmpty) override;
+  bool RemoveImportedItem(CVideoDatabase& videodb,
+                          const CMediaImport& import,
+                          const CFileItem* item,
+                          bool onlyIfEmpty);
 };
