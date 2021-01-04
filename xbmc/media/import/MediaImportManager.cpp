@@ -2166,17 +2166,22 @@ bool CMediaImportManager::OnTaskComplete(bool success, const IMediaImportTask* t
       return false;
     }
 
-    // remove the import from the import repositories
+    // only execute the rest of the work once all media types of the import have been processed
+    const auto& mediaType = removalTask->GetMediaType();
+    if (mediaType == MediaTypeNone || mediaType == import.GetMediaTypes().front())
     {
-      CSingleLock repositoriesLock(m_importRepositoriesLock);
-      for (auto& repository : m_importRepositories)
-        repository->RemoveImport(import);
+      // remove the import from the import repositories
+      {
+        CSingleLock repositoriesLock(m_importRepositoriesLock);
+        for (auto& repository : m_importRepositories)
+          repository->RemoveImport(import);
+      }
+
+      // let everyone know that the import has been removed
+      OnImportRemoved(import);
+
+      CServiceBroker::GetEventLog().Add(EventPtr(new CMediaImportEvent(import, 39579, true)));
     }
-
-    // let everyone know that the import has been removed
-    OnImportRemoved(import);
-
-    CServiceBroker::GetEventLog().Add(EventPtr(new CMediaImportEvent(import, 39579, true)));
   }
   else if (taskType == MediaImportTaskType::Update)
   {

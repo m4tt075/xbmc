@@ -15,26 +15,6 @@
 
 #include <fmt/ostream.h>
 
-bool CMusicVideoImportHandler::AddImportedItem(const CMediaImport& import, CFileItem* item)
-{
-  if (item == nullptr)
-    return false;
-
-  PrepareItem(import, item);
-
-  item->GetVideoInfoTag()->m_iDbId =
-      m_db.SetDetailsForMusicVideo(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt());
-  if (item->GetVideoInfoTag()->m_iDbId <= 0)
-  {
-    GetLogger()->error("failed to set details for added music video \"{}\" imported from {}",
-                       item->GetLabel(), import);
-    return false;
-  }
-
-  SetDetailsForFile(item, false);
-  return SetImportForItem(item, import);
-}
-
 bool CMusicVideoImportHandler::UpdateImportedItem(const CMediaImport& import, CFileItem* item)
 {
   if (item == nullptr || !item->HasVideoInfoTag() || item->GetVideoInfoTag()->m_iDbId <= 0)
@@ -49,7 +29,7 @@ bool CMusicVideoImportHandler::UpdateImportedItem(const CMediaImport& import, CF
   }
 
   if (import.Settings()->UpdatePlaybackMetadataFromSource())
-    SetDetailsForFile(item, true);
+    SetDetailsForFile(m_db, item, true);
 
   return true;
 }
@@ -67,7 +47,7 @@ bool CMusicVideoImportHandler::RemoveImportedItem(const CMediaImport& import, co
 
 bool CMusicVideoImportHandler::GetLocalItems(CVideoDatabase& videodb,
                                              const CMediaImport& import,
-                                             std::vector<CFileItemPtr>& items) const
+                                             std::vector<CFileItemPtr>& items)
 {
   CVideoDbUrl videoUrl;
   videoUrl.FromString("videodb://musicvideos/titles/");
@@ -102,4 +82,26 @@ std::set<Field> CMusicVideoImportHandler::IgnoreDifferences() const
           FieldTrackNumber,   FieldTrailer,
           FieldTvShowStatus,  FieldTvShowTitle,
           FieldWriter};
+}
+
+bool CMusicVideoImportHandler::AddImportedItem(CVideoDatabase& videodb,
+                                               const CMediaImport& import,
+                                               CFileItem* item)
+{
+  if (item == nullptr)
+    return false;
+
+  PrepareItem(videodb, import, item);
+
+  item->GetVideoInfoTag()->m_iDbId =
+    videodb.SetDetailsForMusicVideo(item->GetPath(), *(item->GetVideoInfoTag()), item->GetArt());
+  if (item->GetVideoInfoTag()->m_iDbId <= 0)
+  {
+    GetLogger()->error("failed to set details for added music video \"{}\" imported from {}",
+      item->GetLabel(), import);
+    return false;
+  }
+
+  SetDetailsForFile(videodb, item, false);
+  return SetImportForItem(videodb, item, import, videodb.GetFileId(item->GetPath()));
 }

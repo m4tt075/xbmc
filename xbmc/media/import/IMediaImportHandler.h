@@ -62,7 +62,7 @@ public:
    * \param items List of previously imported items from the given media import
    */
   virtual bool GetLocalItems(const CMediaImport& import,
-                             std::vector<CFileItemPtr>& items) const = 0;
+                             std::vector<CFileItemPtr>& items) = 0;
 
   /*!
    * \brief Starts the task determining the changeset of the imported items against previously imported items.

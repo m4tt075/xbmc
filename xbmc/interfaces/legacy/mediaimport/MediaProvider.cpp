@@ -154,10 +154,26 @@ std::vector<MediaImport*> MediaProvider::getImports() const
 
   std::vector<MediaImport*> result;
   for (const auto& import : imports)
-  {
     result.push_back(new MediaImport(import, m_addonId, m_addonMediaImporter));
-  }
+
   return result;
+}
+
+MediaImport* MediaProvider::getImportByMediaType(const String& mediaType) const
+{
+  // check if the given media type is supported by the provider
+  const auto availableMediaTypes = source->GetAvailableMediaTypes();
+  if (availableMediaTypes.find(mediaType) == availableMediaTypes.end())
+    return nullptr;
+
+  const auto imports =
+    CServiceBroker::GetMediaImportManager().GetImportsBySource(source->GetIdentifier());
+  const auto import = std::find_if(imports.begin(), imports.end(),
+    [mediaType](const CMediaImport& import) { return import.ContainsMediaType(mediaType); });
+  if (import != imports.end())
+    return new MediaImport(*import, m_addonId, m_addonMediaImporter);
+
+  return nullptr;
 }
 
 XBMCAddon::xbmcaddon::Settings* MediaProvider::createSettings(MediaImportSourceSettingsPtr settings)

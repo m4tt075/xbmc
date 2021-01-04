@@ -23,7 +23,7 @@ public:
 
   std::string GetItemLabel(const CFileItem* item) const override;
 
-  bool GetLocalItems(const CMediaImport& import, std::vector<CFileItemPtr>& items) const override;
+  bool GetLocalItems(const CMediaImport& import, std::vector<CFileItemPtr>& items) override;
 
   bool StartChangeset(const CMediaImport& import) override;
   bool FinishChangeset(const CMediaImport& import) override;
@@ -40,6 +40,8 @@ public:
   bool StartSynchronisation(const CMediaImport& import) override;
   bool FinishSynchronisation(const CMediaImport& import) override;
 
+  bool AddImportedItem(const CMediaImport& import, CFileItem* item) override;
+
   bool RemoveImportedItems(const CMediaImport& import) override;
 
   void SetImportedItemsEnabled(const CMediaImport& import, bool enable) override;
@@ -49,28 +51,38 @@ protected:
 
   virtual bool GetLocalItems(CVideoDatabase& videodb,
                              const CMediaImport& import,
-                             std::vector<CFileItemPtr>& items) const = 0;
+                             std::vector<CFileItemPtr>& items) = 0;
 
   virtual std::set<Field> IgnoreDifferences() const { return std::set<Field>(); }
 
-  virtual bool RemoveImportedItems(CVideoDatabase& videodb, const CMediaImport& import) const;
+  virtual bool AddImportedItem(CVideoDatabase& videodb,
+                               const CMediaImport& import,
+                               CFileItem* item) = 0;
 
-  void PrepareItem(const CMediaImport& import, CFileItem* pItem);
-  void SetDetailsForFile(const CFileItem* pItem, bool reset);
-  bool SetImportForItem(const CFileItem* pItem, const CMediaImport& import, int idPath = -1);
-  void RemoveFile(CVideoDatabase& videodb, const CFileItem* item) const;
+  virtual bool RemoveImportedItems(CVideoDatabase& videodb, const CMediaImport& import, bool onlyIfEmpty);
+
+  void PrepareItem(CVideoDatabase& videodb, const CMediaImport& import, CFileItem* pItem);
+  void SetDetailsForFile(CVideoDatabase& videodb, const CFileItem* pItem, bool reset);
+  bool SetImportForItem(CVideoDatabase& videodb,
+                        const CFileItem* pItem,
+                        const CMediaImport& import,
+                        int idFilesystem = -1);
 
   bool Compare(const CFileItem* originalItem,
                const CFileItem* newItem,
                bool allMetadata = true,
                bool playbackMetadata = true) const;
 
+  static int GetTotalItemsInDb(const CFileItemList& itemsFromDb);
+
+  static void RemoveFile(CVideoDatabase& videodb, const CFileItem* item);
+
   static void RemoveAutoArtwork(CGUIListItem::ArtMap& artwork,
                                 const std::set<std::string>& parentPrefixes);
 
   static Logger GetLogger();
 
-  mutable CVideoDatabase m_db;
+  CVideoDatabase m_db;
   CVideoThumbLoader m_thumbLoader;
   std::map<std::string, int> m_sourceIds;
 };

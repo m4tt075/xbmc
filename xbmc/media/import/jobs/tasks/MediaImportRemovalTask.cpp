@@ -23,6 +23,14 @@ CMediaImportRemovalTask::CMediaImportRemovalTask(const CMediaImport& import,
 {
 }
 
+MediaType CMediaImportRemovalTask::GetMediaType() const
+{
+  if (m_importHandler == nullptr)
+    return MediaTypeNone;
+
+  return m_importHandler->GetMediaType();
+}
+
 bool CMediaImportRemovalTask::DoWork()
 {
   if (m_importHandler == nullptr)
