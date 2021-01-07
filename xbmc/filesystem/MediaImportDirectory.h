@@ -18,10 +18,10 @@
 const std::string PROPERTY_SOURCE_IDENTIFIER = "Source.ID";
 const std::string PROPERTY_SOURCE_NAME = "Source.Name";
 const std::string PROPERTY_SOURCE_PROTOCOL = "Source.Protocol";
-const std::string PROPERTY_SOURCE_MEDIATYPES_LABEL = "Source.MediaTypesLabel";
 const std::string PROPERTY_SOURCE_ISACTIVE = "Source.Active";
 const std::string PROPERTY_SOURCE_ISACTIVE_LABEL = "Source.ActiveLabel";
 const std::string PROPERTY_SOURCE_ISREADY = "Source.Ready";
+const std::string PROPERTY_SOURCE_IMPORTER_PROTOCOL = "Source.ImporterProtocol";
 const std::string PROPERTY_IMPORT_NAME = "Import.Name";
 const std::string PROPERTY_IMPORT_MEDIATYPES = "Import.MediaTypes";
 
@@ -45,8 +45,7 @@ public:
   static CFileItemPtr FileItemFromMediaImportSource(const CMediaImportSource& source,
                                                     const std::string& basePath);
   static CFileItemPtr FileItemFromMediaImport(const CMediaImport& import,
-                                              const std::string& basePath,
-                                              bool bySource = false);
+                                              const std::string& basePath);
 
 private:
   static void HandleSources(const std::string& strPath,
@@ -55,7 +54,8 @@ private:
 
   static void HandleImports(const std::string& strPath,
                             const std::vector<CMediaImport>& imports,
-                            CFileItemList& items,
-                            bool bySource = false);
+                            CFileItemList& items);
+
+  static std::string GetSourceProtocol(const CMediaImportSource& source);
 };
 } // namespace XFILE

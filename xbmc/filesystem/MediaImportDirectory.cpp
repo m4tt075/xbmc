@@ -163,19 +163,19 @@ CFileItemPtr CMediaImportDirectory::FileItemFromMediaImportSource(const CMediaIm
                                                         ? g_localizeStrings.Get(39576)
                                                         : g_localizeStrings.Get(39577));
   item->SetProperty(PROPERTY_SOURCE_ISREADY, source.IsReady());
+  item->SetProperty(PROPERTY_SOURCE_IMPORTER_PROTOCOL, GetSourceProtocol(source));
 
   return item;
 }
 
 void CMediaImportDirectory::HandleImports(const std::string& strPath,
                                           const std::vector<CMediaImport>& imports,
-                                          CFileItemList& items,
-                                          bool bySource /* = false */)
+                                          CFileItemList& items)
 {
   for (std::vector<CMediaImport>::const_iterator itImport = imports.begin();
        itImport != imports.end(); ++itImport)
   {
-    CFileItemPtr item = FileItemFromMediaImport(*itImport, strPath, bySource);
+    CFileItemPtr item = FileItemFromMediaImport(*itImport, strPath);
     if (item != NULL)
       items.Add(item);
   }
@@ -184,8 +184,7 @@ void CMediaImportDirectory::HandleImports(const std::string& strPath,
 }
 
 CFileItemPtr CMediaImportDirectory::FileItemFromMediaImport(const CMediaImport& import,
-                                                            const std::string& basePath,
-                                                            bool bySource /* = false */)
+                                                            const std::string& basePath)
 {
   if (import.GetMediaTypes().empty())
     return CFileItemPtr();
@@ -194,15 +193,11 @@ CFileItemPtr CMediaImportDirectory::FileItemFromMediaImport(const CMediaImport& 
 
   CURL url(basePath);
   url.SetOption("mediatypes", import.GetMediaTypesAsString());
-  std::string path = url.Get();
-  std::string mediaTypesLabel = CMediaTypes::ToLabel(import.GetMediaTypes());
-  std::string label = mediaTypesLabel;
-  if (!bySource)
-    label = StringUtils::Format(g_localizeStrings.Get(39565).c_str(),
-                                source.GetFriendlyName().c_str(), label.c_str());
+  const auto path = url.Get();
+  const auto mediaTypesLabel = CMediaTypes::ToLabel(import.GetMediaTypes());
 
   CFileItemPtr item(new CFileItem(path, false));
-  item->SetLabel(label);
+  item->SetLabel(mediaTypesLabel);
   item->m_dateTime = import.GetLastSynced();
 
   if (!source.GetIconUrl().empty())
@@ -219,6 +214,17 @@ CFileItemPtr CMediaImportDirectory::FileItemFromMediaImport(const CMediaImport& 
                                                         ? g_localizeStrings.Get(39576)
                                                         : g_localizeStrings.Get(39577));
   item->SetProperty(PROPERTY_SOURCE_ISREADY, source.IsReady());
+  item->SetProperty(PROPERTY_SOURCE_IMPORTER_PROTOCOL, GetSourceProtocol(source));
 
   return item;
+}
+
+std::string CMediaImportDirectory::GetSourceProtocol(const CMediaImportSource& source)
+{
+  // determine and set the importer protocol
+  const auto importer = CServiceBroker::GetMediaImportManager().GetImporterById(source.GetImporterId());
+  if (importer != nullptr)
+    return importer->GetSourceLookupProtocol();
+
+  return g_localizeStrings.Get(39580); // "Unknown"
 }

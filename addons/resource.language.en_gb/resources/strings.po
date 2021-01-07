@@ -22705,7 +22705,13 @@ msgctxt "#39579"
 msgid "Removal successful"
 msgstr ""
 
-# strings from id 39580 to 39599 reserved for media import
+#. Label if the importer protocol is unknown
+#: xbmc/filesystem/MediaImportDirectory.cpp
+msgctxt "#39580"
+msgid "Unknown"
+msgstr ""
+
+# strings from id 39581 to 39599 reserved for media import
 
 #: xbmc/filesystem/MediaImportDirectory.cpp
 #: xbmc/media/import/windows/GUIWindowMediaSourceBrowser.cpp
@@ -22854,9 +22860,20 @@ msgctxt "#39705"
 msgid "Last synced"
 msgstr ""
 
-#: addons/skin.estuary/xml/DialogMediaImportInfo.xml
+#. Label if a media provider / import has never been synchronised.
+#: addons/skin.estuary/xml/Variables.xml
 msgctxt "#39706"
+msgid "Never"
+msgstr ""
+
+#: addons/skin.estuary/xml/DialogMediaImportInfo.xml
+msgctxt "#39707"
 msgid "Available media types"
 msgstr ""
 
-#strings from 39707 to 39799 are reserved for media import GUI info
+#: addons/skin.estuary/xml/DialogMediaImportInfo.xml
+msgctxt "#39708"
+msgid "Protocol"
+msgstr ""
+
+#strings from 39709 to 39799 are reserved for media import GUI info
