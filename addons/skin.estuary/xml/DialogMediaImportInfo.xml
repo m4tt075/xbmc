@@ -47,20 +47,8 @@
 						<aligny>center</aligny>
 						<font>font12_title</font>
 						<textcolor>white</textcolor>
-						<label>[B]$INFO[ListItem.Property(Import.Name)][/B]</label>
+						<label>[B]$VAR[MediaImportTitle][/B]</label>
 						<scroll>true</scroll>
-						<visible>!IsEmpty(ListItem.Property(Import.Path))</visible>
-					</control>
-					<control type="label">
-						<width>1020</width>
-						<height>65</height>
-						<align>left</align>
-						<aligny>center</aligny>
-						<font>font12_title</font>
-						<textcolor>white</textcolor>
-						<label>[B]$INFO[ListItem.Property(Source.Name)][/B]</label>
-						<scroll>true</scroll>
-						<visible>IsEmpty(ListItem.Property(Import.Path))</visible>
 					</control>
 				</control>
 				<!-- Metadata -->
@@ -80,8 +68,8 @@
 						<texturefocus />
 						<texturenofocus />
 						<onclick>noop</onclick>
-						<label>[COLOR button_focus]$LOCALIZE[39702]: [/COLOR]$INFO[ListItem.Property(Source.Name)]</label>
-						<visible>!IsEmpty(ListItem.Property(Import.Path)) + !String.IsEmpty(ListItem.Property(Source.Name))</visible>
+						<label>[COLOR button_focus]$LOCALIZE[39702]:[/COLOR] $INFO[ListItem.Property(Source.Name)]</label>
+						<visible>!String.IsEmpty(ListItem.Property(Source.Name))</visible>
 					</control>
 					<control type="button" id="148">
 						<width>1020</width>
@@ -93,8 +81,8 @@
 						<texturefocus />
 						<texturenofocus />
 						<onclick>noop</onclick>
-						<label>[COLOR button_focus]$LOCALIZE[39703]: [/COLOR]$INFO[ListItem.Property(Import.MediaTypesLabel)]</label>
-						<visible>!IsEmpty(ListItem.Property(Import.Path)) + !String.IsEmpty(ListItem.Property(Import.MediaTypesLabel))</visible>
+						<label>[COLOR button_focus]$LOCALIZE[39703]:[/COLOR] $INFO[ListItem.Property(Import.MediaTypesLabel)]</label>
+						<visible>!String.IsEmpty(ListItem.Property(Import.MediaTypesLabel))</visible>
 					</control>
 					<control type="button" id="149">
 						<width>1020</width>
@@ -107,7 +95,7 @@
 						<texturenofocus />
 						<onclick>noop</onclick>
 						<label>[COLOR button_focus]$LOCALIZE[39706]: [/COLOR]$INFO[ListItem.Property(Source.MediaTypesLabel)]</label>
-						<visible>IsEmpty(ListItem.Property(Import.Path)) + !String.IsEmpty(ListItem.Property(Source.MediaTypesLabel))</visible>
+						<visible>!String.IsEmpty(ListItem.Property(Source.MediaTypesLabel))</visible>
 					</control>
 					<control type="button" id="150">
 						<width>1020</width>
