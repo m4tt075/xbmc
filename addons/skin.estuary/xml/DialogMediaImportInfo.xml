@@ -170,6 +170,17 @@
 				<height>452</height>
 				<texture border="40">buttons/dialogbutton-nofo.png</texture>
 			</control>
+			<control type="label" id="4">
+				<description>no settings available label</description>
+				<left>420</left>
+				<top>460</top>
+				<width>1060</width>
+				<height>410</height>
+				<align>center</align>
+				<aligny>center</aligny>
+				<font>font25_title</font>
+				<textcolor>grey</textcolor>
+			</control>
 			<control type="grouplist" id="5">
 				<description>control area</description>
 				<left>420</left>
