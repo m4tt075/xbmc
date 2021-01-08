@@ -179,8 +179,7 @@ void CAddonMediaImporterDiscoverer::Stop()
 }
 
 CAddonMediaImporter::CAddonMediaImporter(const std::string& addonId)
-  : CAddonMediaImporterBase(addonId, "CAddonMediaImporter"),
-    CStaticLoggerBase("CAddonMediaImporter")
+  : CAddonMediaImporterBase(addonId, "CAddonMediaImporter")
 {
 }
 
@@ -627,7 +626,7 @@ bool CAddonMediaImporter::PrepareProviderSettings(std::shared_ptr<ADDON::CMediaI
   if (LoadSettingsFromFile(addon->ID(), settings, addon->ProviderSettingsPath()))
     return true;
 
-  s_logger->warn("failed to load provider settings for {} from {}", addon->ID(),
+  GetLogger()->warn("failed to load provider settings for {} from {}", addon->ID(),
                  addon->ProviderSettingsPath());
 
   return false;
@@ -655,7 +654,7 @@ bool CAddonMediaImporter::PrepareImportSettings(std::shared_ptr<ADDON::CMediaImp
   if (LoadSettingsFromFile(addon->ID(), settings, addon->ImportSettingsPath()))
     return true;
 
-  s_logger->warn("failed to load import settings for {} from {}", addon->ID(),
+  GetLogger()->warn("failed to load import settings for {} from {}", addon->ID(),
                  addon->ImportSettingsPath());
 
   return false;
@@ -736,13 +735,13 @@ bool CAddonMediaImporter::LoadSettingsFromFile(const std::string& addonId,
   CXBMCTinyXML xmlDoc;
   if (!XFILE::CFile::Exists(settingDefinitionsFile))
   {
-    s_logger->error("could not find provider settings for {} at {}", addonId,
+    GetLogger()->error("could not find provider settings for {} at {}", addonId,
                     settingDefinitionsFile);
     return false;
   }
   if (!xmlDoc.LoadFile(settingDefinitionsFile))
   {
-    s_logger->error("failed to parse provider settings for {} from {}: Line {}, {}", addonId,
+    GetLogger()->error("failed to parse provider settings for {} from {}: Line {}, {}", addonId,
                     settingDefinitionsFile, xmlDoc.ErrorRow(), xmlDoc.ErrorDesc());
     return false;
   }
@@ -758,7 +757,7 @@ bool CAddonMediaImporter::LoadSettingsFromFile(const std::string& addonId,
   if (settings->IsLoaded())
     settings->Unload();
 
-  s_logger->debug("loading settings for {} from {}...", addonId, settingDefinitionsFile);
+  GetLogger()->debug("loading settings for {} from {}...", addonId, settingDefinitionsFile);
 
   if (!settings->HasDefinition(settingDefinition))
     settings->AddDefinition(settingDefinition);
@@ -854,14 +853,14 @@ std::vector<CFileItemPtr> CAddonMediaImporter::GetImportedItems(
   if (!executor->CheckAction(CAddonMediaImporterExecutor::Action::Import) ||
       executor->GetTask() == nullptr)
   {
-    s_logger->error("cannot get imported items for handle {}", handle);
+    GetLogger()->error("cannot get imported items for handle {}", handle);
     return {};
   }
 
   auto retrievalTask = dynamic_cast<CMediaImportImportItemsRetrievalTask*>(executor->GetTask());
   if (retrievalTask == nullptr)
   {
-    s_logger->error("invalid import task ({}) to get imported items for handle {}",
+    GetLogger()->error("invalid import task ({}) to get imported items for handle {}",
                     static_cast<int>(executor->GetTask()->GetType()), handle);
     return {};
   }
@@ -880,14 +879,14 @@ void CAddonMediaImporter::AddImportItem(
   if (!executor->CheckAction(CAddonMediaImporterExecutor::Action::Import) ||
       executor->GetTask() == nullptr)
   {
-    s_logger->error("cannot add imported item for handle {}", handle);
+    GetLogger()->error("cannot add imported item for handle {}", handle);
     return;
   }
 
   auto retrievalTask = dynamic_cast<CMediaImportImportItemsRetrievalTask*>(executor->GetTask());
   if (retrievalTask == nullptr)
   {
-    s_logger->error("invalid import task ({}) to add imported item for handle {}",
+    GetLogger()->error("invalid import task ({}) to add imported item for handle {}",
                     static_cast<int>(executor->GetTask()->GetType()), handle);
     return;
   }
@@ -906,14 +905,14 @@ void CAddonMediaImporter::AddImportItems(
   if (!executor->CheckAction(CAddonMediaImporterExecutor::Action::Import) ||
       executor->GetTask() == nullptr)
   {
-    s_logger->error("cannot add imported items for handle {}", handle);
+    GetLogger()->error("cannot add imported items for handle {}", handle);
     return;
   }
 
   auto retrievalTask = dynamic_cast<CMediaImportImportItemsRetrievalTask*>(executor->GetTask());
   if (retrievalTask == nullptr)
   {
-    s_logger->error("invalid import task ({}) to add imported items for handle {}",
+    GetLogger()->error("invalid import task ({}) to add imported items for handle {}",
                     static_cast<int>(executor->GetTask()->GetType()), handle);
     return;
   }
@@ -928,14 +927,14 @@ void CAddonMediaImporter::FinishImport(HandleType handle, bool isChangeset /* = 
   if (!executor->CheckAction(CAddonMediaImporterExecutor::Action::Import) ||
       executor->GetTask() == nullptr)
   {
-    s_logger->error("cannot finish import for handle {}", handle);
+    GetLogger()->error("cannot finish import for handle {}", handle);
     return;
   }
 
   auto retrievalTask = dynamic_cast<CMediaImportImportItemsRetrievalTask*>(executor->GetTask());
   if (retrievalTask == nullptr)
   {
-    s_logger->error("invalid import task ({}) to finish import for handle {}",
+    GetLogger()->error("invalid import task ({}) to finish import for handle {}",
                     static_cast<int>(executor->GetTask()->GetType()), handle);
     return;
   }
@@ -952,14 +951,14 @@ CFileItemPtr CAddonMediaImporter::GetUpdatedItem(HandleType handle) throw(
   if (!executor->CheckAction(CAddonMediaImporterExecutor::Action::UpdateOnSource) ||
       executor->GetTask() == nullptr)
   {
-    s_logger->error("cannot update imported item for handle {}", handle);
+    GetLogger()->error("cannot update imported item for handle {}", handle);
     return nullptr;
   }
 
   auto updateTask = dynamic_cast<CMediaImportUpdateTask*>(executor->GetTask());
   if (updateTask == nullptr)
   {
-    s_logger->error("invalid import task ({}) to update imported item for handle {}",
+    GetLogger()->error("invalid import task ({}) to update imported item for handle {}",
                     static_cast<int>(executor->GetTask()->GetType()), handle);
     return nullptr;
   }
@@ -979,6 +978,12 @@ void CAddonMediaImporter::SetSuccess(
     CAddonMediaImporterExecutor::Action action) throw(InvalidAddonMediaImporterHandleException)
 {
   CAddonMediaImporterExecutor::GetExecutorFromHandle(handle)->SetSuccess(success, action);
+}
+
+Logger CAddonMediaImporter::GetLogger()
+{
+  static Logger s_logger = CServiceBroker::GetLogging().GetLogger("CAddonMediaImporter");
+  return s_logger;
 }
 
 CAddonMediaImporterObserver::CAddonMediaImporterObserver(const std::string& addonId)
