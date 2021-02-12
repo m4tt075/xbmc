@@ -85,6 +85,16 @@ CMediaImportSettings::CMediaImportSettings(const CMediaImportSettings& other)
   : CMediaImportSettingsBase(other), m_mediaTypes(other.m_mediaTypes)
 {
   Setup();
+
+  if (other.IsLoaded())
+  {
+    // this is already done by the copy ctor of CMediaImportSettingsBase but before we call
+    // Setup() so we need to unload it again before properly loading it.
+    if (IsLoaded())
+      Unload();
+
+    Load();
+  }
 }
 
 MediaImportTrigger CMediaImportSettings::GetImportTrigger() const
