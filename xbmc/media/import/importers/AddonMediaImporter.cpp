@@ -751,14 +751,19 @@ bool CAddonMediaImporter::LoadSettingsFromFile(const std::string& addonId,
 
   const auto settingDefinition = printer.Str();
 
-  // if the settings have already been loaded unload them again
+  // check if the setting definition has already been loaded
   if (settings->IsLoaded())
+  {
+    if (settings->HasDefinition(settingDefinition))
+      return true;
+
+    // otherwise unload the settings
     settings->Unload();
+  }
 
   GetLogger()->debug("loading settings for {} from {}...", addonId, settingDefinitionsFile);
 
-  if (!settings->HasDefinition(settingDefinition))
-    settings->AddDefinition(settingDefinition);
+  settings->AddDefinition(settingDefinition);
   return settings->Load();
 }
 
